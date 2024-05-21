@@ -13,7 +13,7 @@ _cachy_config=${_cachy_config-y}
 # ATTENTION - only one of the following values can be selected:
 # 'bore' - select 'Burst-Oriented Response Enhancer'
 # 'hardened' - select 'BORE Scheduler hardened' ## kernel with hardened config and hardening patches with the bore scheduler
-# 'cachyos' - select 'EEVDF-BORE Variant Scheduler'
+# 'cachyos' - select 'Sched-Ext Scheduler Framework Variant Scheduler with BORE Scheduler'
 # 'eevdf' - select 'EEVDF Scheduler'
 # 'rt' - select EEVDF, but includes a series of realtime patches
 # 'rt-bore' - select Burst-Oriented Response Enhancer, but includes a series of realtime patches
@@ -82,20 +82,6 @@ _tickrate=${_tickrate-full}
 ## Choose between full(low-latency), voluntary or server
 _preempt=${_preempt-full}
 
-### Enable multigenerational LRU
-# ATTENTION - one of three predefined values should be selected!
-# 'standard' - enable multigenerational LRU
-# 'stats' - enable multigenerational LRU with stats
-# 'none' - disable multigenerational LRU
-_lru_config=${_lru_config-standard}
-
-### Enable per-VMA locking
-# ATTENTION - one of three predefined values should be selected!
-# 'standard' - enable per-VMA locking
-# 'stats' - enable per-VMA locking with stats
-# 'none' - disable per-VMA locking
-_vma_config=${_vma_config-standard}
-
 ### Transparent Hugepages
 # ATTENTION - one of two predefined values should be selected!
 # 'always' - always enable THP
@@ -115,9 +101,9 @@ _damon=${_damon-}
 # - "native_intel" (use compiler autodetection and will prompt for P6_NOPS - Selecting your arch manually in the list above is recommended instead of this option)
 # - "generic" (kernel's default - to share the package between machines with different CPU µarch as long as they are x86-64)
 #
-# Or use the _use_auto_optimization with _use_auto_optimization=y
 _processor_opt=${_processor_opt-}
 
+# This does automatically detect your supported CPU and optimizes for it
 _use_auto_optimization=${_use_auto_optimization-y}
 
 # Clang LTO mode, only available with the "llvm" compiler - options are "none", "full" or "thin".
@@ -150,6 +136,11 @@ _build_zfs=${_build_zfs-}
 # This does replace the requirement of nvidia-dkms
 _build_nvidia=${_build_nvidia-}
 
+# Builds the open nvidia module and package it into a own base
+# This does replace the requirement of nvidia-open-dkms
+# Use this only if you have Turing+ GPU
+_build_nvidia_open=${_build_nvidia_open-}
+
 if [[ "$_use_llvm_lto" = "thin" || "$_use_llvm_lto" = "full" ]] && [ "$_use_lto_suffix" = "y"  ]; then
     pkgsuffix=cachyos-rc-lto
     pkgbase=linux-$pkgsuffix
@@ -174,7 +165,7 @@ _kernver=$pkgver-$pkgrel
 arch=('x86_64' 'x86_64_v3')
 url="https://github.com/CachyOS/linux-cachyos"
 license=('GPL-2.0-only')
-options=('!strip' '!debug')
+options=('!strip' '!debug' '!lto')
 makedepends=('bc' 'libelf' 'pahole' 'cpio' 'perl' 'tar' 'xz' 'zstd' 'gcc' 'gcc-libs' 'glibc' 'binutils' 'make' 'patch' 'python')
 # LLVM makedepends
 if [[ "$_use_llvm_lto" = "thin" || "$_use_llvm_lto" = "full" ]] || [ -n "$_use_kcfi" ]; then
@@ -190,6 +181,7 @@ fi
 _patchsource="https://raw.githubusercontent.com/cachyos/kernel-patches/master/${_major}"
 _nv_ver=550.78
 _nv_pkg="NVIDIA-Linux-x86_64-${_nv_ver}"
+_nv_open_pkg="open-gpu-kernel-modules-${_nv_ver}"
 source=(
     "https://github.com/torvalds/linux/archive/refs/tags/v${_major}-${_rcver}.tar.gz"
     "config"
@@ -214,10 +206,18 @@ if [ -n "$_build_nvidia" ]; then
              "${_patchsource}/misc/nvidia/0001-NVIDIA-take-modeset-ownership-early.patch")
 fi
 
+if [ -n "$_build_nvidia_open" ]; then
+    source+=("nvidia-open-${_nv_ver}.tar.gz::https://github.com/NVIDIA/open-gpu-kernel-modules/archive/refs/tags/${_nv_ver}.tar.gz"
+             "${_patchsource}/misc/nvidia/make-modeset-fbdev-default.patch"
+             "${_patchsource}/misc/nvidia/0001-NVIDIA-take-modeset-ownership-early.patch"
+             "${_patchsource}/misc/nvidia/nvidia-open-gcc-ibt-sls.patch")
+fi
+
 ## List of CachyOS schedulers
 case "$_cpusched" in
-    cachyos) # CachyOS Scheduler (SCHED-EXT)
-        source+=("${_patchsource}/sched/0001-sched-ext.patch");;
+    cachyos) # CachyOS Scheduler (Sched-ext + BORE + Cachy Sauce)
+        source+=("${_patchsource}/sched/0001-sched-ext.patch"
+                 "${_patchsource}/sched/0001-bore-cachy-ext.patch");;
     bore) ## BORE Scheduler
         source+=("${_patchsource}/sched/0001-bore-cachy.patch");;
     echo) ## ECHO Scheduler
@@ -257,6 +257,7 @@ prepare() {
         src="${src%.zst}"
         [[ $src = make-modeset-fbdev-default.patch ]] && continue
         [[ $src = 0001-NVIDIA-take-modeset-ownership-early.patch ]] && continue
+        [[ $src = nvidia-open-gcc-ibt-sls.patch ]] && continue
         [[ $src = *.patch ]] || continue
         echo "Applying patch $src..."
         patch -Np1 < "../$src"
@@ -288,7 +289,7 @@ prepare() {
     [ -z "$_cpusched" ] && _die "The value is empty. Choose the correct one again."
 
     case "$_cpusched" in
-        cachyos) scripts/config -e SCHED_CLASS_EXT;;
+        cachyos) scripts/config -e SCHED_CLASS_EXT -e SCHED_BORE;;
         bore|hardened) scripts/config -e SCHED_BORE;;
         echo) scripts/config -e ECHO_SCHED;;
         eevdf) ;;
@@ -421,30 +422,6 @@ prepare() {
             --set-str DEFAULT_TCP_CONG bbr
     fi
 
-    ### Select LRU config
-    [ -z "$_lru_config" ] && _die "The value is empty. Choose the correct one again."
-
-    case "$_lru_config" in
-        standard) scripts/config -e LRU_GEN -e LRU_GEN_ENABLED -d LRU_GEN_STATS;;
-        stats) scripts/config -e LRU_GEN -e LRU_GEN_ENABLED -e LRU_GEN_STATS;;
-        none) scripts/config -d LRU_GEN;;
-        *) _die "The value '$_lru_config' is invalid. Choose the correct one again.";;
-    esac
-
-    echo "Selecting '$_lru_config' LRU_GEN config..."
-
-    ### Select VMA config
-    [ -z "$_vma_config" ] && _die "The value is empty. Choose the correct one again."
-
-    case "$_vma_config" in
-        standard) scripts/config -e PER_VMA_LOCK -d PER_VMA_LOCK_STATS;;
-        stats) scripts/config -e PER_VMA_LOCK -e PER_VMA_LOCK_STATS;;
-        none) scripts/config -d PER_VMA_LOCK;;
-        *) _die "The value '$_vma_config' is invalid. Choose the correct one again.";;
-    esac
-
-    echo "Selecting '$_vma_config' PER_VMA_LOCK config..."
-
     ### Select THP
     [ -z "$_hugepage" ] && _die "The value is empty. Choose the correct one again."
 
@@ -530,8 +507,16 @@ prepare() {
         sh "${_nv_pkg}.run" --extract-only
 
         # Use fbdev and modeset as default
-        patch -Np1 -i "${srcdir}/make-modeset-fbdev-default.patch" -d "${srcdir}/${_nv_pkg}"
+        patch -Np1 -i "${srcdir}/make-modeset-fbdev-default.patch" -d "${srcdir}/${_nv_pkg}/kernel"
         patch -Np2 --no-backup-if-mismatch -i "${srcdir}/0001-NVIDIA-take-modeset-ownership-early.patch" -d "${srcdir}/${_nv_pkg}/kernel"
+    fi
+
+    if [ -n "$_build_nvidia_open" ]; then
+        patch -Np1 -i "${srcdir}/make-modeset-fbdev-default.patch" -d "${srcdir}/${_nv_open_pkg}/kernel-open"
+        patch -Np2 --no-backup-if-mismatch -i "${srcdir}/0001-NVIDIA-take-modeset-ownership-early.patch" -d "${srcdir}/${_nv_open_pkg}/kernel-open"
+
+        # Fix for https://bugs.archlinux.org/task/74886
+        patch -Np1 --no-backup-if-mismatch -i "${srcdir}/nvidia-open-gcc-ibt-sls.patch" -d "${srcdir}/${_nv_open_pkg}"
     fi
 }
 
@@ -541,7 +526,6 @@ build() {
     make -C tools/bpf/bpftool vmlinux.h feature-clang-bpf-co-re=1
 
     if [ -n "$_build_nvidia" ]; then
-        cd "${srcdir}/${_nv_pkg}/kernel"
         local MODULE_FLAGS=(
            KERNEL_UNAME="${pkgver}-${pkgsuffix}"
            IGNORE_PREEMPT_RT_PRESENCE=1
@@ -549,7 +533,22 @@ build() {
            SYSSRC="${srcdir}/${_srcname}"
            SYSOUT="${srcdir}/${_srcname}"
         )
+
+        cd "${srcdir}/${_nv_pkg}/kernel"
         make ${BUILD_FLAGS[*]} ${MODULE_FLAGS[*]} -j$(nproc) modules
+
+    fi
+
+    if [ -n "$_build_nvidia_open" ]; then
+        cd "${srcdir}/${_nv_open_pkg}"
+        local MODULE_FLAGS=(
+           KERNEL_UNAME="${pkgver}-${pkgsuffix}"
+           IGNORE_PREEMPT_RT_PRESENCE=1
+           IGNORE_CC_MISMATCH=yes
+           SYSSRC="${srcdir}/${_srcname}"
+           SYSOUT="${srcdir}/${_srcname}"
+        )
+        CFLAGS= CXXFLAGS= LDFLAGS= make ${BUILD_FLAGS[*]} ${MODULE_FLAGS[*]} -j$(nproc) modules
     fi
 
     if [ -n "$_build_zfs" ]; then
@@ -686,7 +685,7 @@ _package-zfs(){
     pkgdesc="zfs module for the $pkgdesc kernel"
     depends=('pahole' $pkgbase=$_kernver)
     provides=('ZFS-MODULE')
-
+    license=('CDDL')
     local moduleprefix=${_major}.${_minor}-${_rcver}-${pkgrel}
 
     cd ${srcdir}/"zfs"
@@ -710,9 +709,25 @@ _package-nvidia(){
     find "$pkgdir" -name '*.ko' -exec zstd --rm -10 {} +
 }
 
+_package-nvidia-open(){
+    pkgdesc="nvidia open modules of ${_nv_ver} driver for the linux-$pkgsuffix kernel"
+    depends=("$pkgbase=$_kernver" "nvidia-utils=${_nv_ver}" "libglvnd")
+    provides=('NVIDIA-MODULE')
+    license=('GPL')
+
+    local moduleprefix=${_major}.${_minor}-${_rcver}-${pkgrel}
+    cd "${srcdir}/${_nv_open_pkg}"
+    install -dm755 "$pkgdir/usr/lib/modules/${moduleprefix}-${pkgsuffix}"
+    install -m644 kernel/*.ko "$pkgdir/usr/lib/modules/${moduleprefix}-${pkgsuffix}"
+    install -Dt "$pkgdir/usr/share/licenses/${pkgname}" -m644 COPYING
+
+    find "$pkgdir" -name '*.ko' -exec zstd --rm -10 {} +
+}
+
 pkgname=("$pkgbase" "$pkgbase-headers")
 [ -n "$_build_zfs" ] && pkgname+=("$pkgbase-zfs")
 [ -n "$_build_nvidia" ] && pkgname+=("$pkgbase-nvidia")
+[ -n "$_build_nvidia_open" ] && pkgname+=("$pkgbase-nvidia-open")
 for _p in "${pkgname[@]}"; do
     eval "package_$_p() {
     $(declare -f "_package${_p#$pkgbase}")
@@ -721,7 +736,8 @@ for _p in "${pkgname[@]}"; do
 done
 
 b2sums=('9f346bbd6c540249de07d2e20efcdaecec7159a2ef04d9208dc0ee5165fc1bab80fc1424e1391ec4aa8c1682c49989188beba902d34472bbf39ae3440845d216'
-        '47ef1bc417813cd6eac010c9e35c01c0bcddba095bcdd5b974e85bd37ca562ca9525914797eab81040ff5d4e2395236b854e4fc6a44ad7096d51a74a854e13ec'
+        '2e008839b9466532b887066cb8772bde09f80c5ef11ae3b6bf2c45441278df79bbe70ffddc0010b48a62592849393dded00461ef741bfcd6b82e738d706713ff'
         '43ef7a347878592740d9eb23b40a56083fa747f7700fa1e2c6d039d660c0b876d99bf1a3160e15d041fb13d45906cdb5defef034d4d0ae429911864239c94d8d'
-        '88f947f6c5363f34024eaaadd793a0605b5f92082d41ed6f822bc3c8b4dfd02b7a09136026676a30f8aa62b8fc7ac808a2c8d5eeb6178b247428ac9890f6931a'
-        '1ebb80c0e3838f017062b2de09ca1a2a8989b7ddadc817497aa37de29c17e99397e2d35cb64b7d9c1f1eec4281f0a3dcd2d9796d43f2f2c892cb4c4edafda68f')
+        'f7c64bdfd1afc521e32cbe2d025aa9df201c7ee1462b921447cf5df5abdbfce4a555fe4569773dbc6e0ad77965cc64a685eb866f882a9917a764861089505a76'
+        '1ebb80c0e3838f017062b2de09ca1a2a8989b7ddadc817497aa37de29c17e99397e2d35cb64b7d9c1f1eec4281f0a3dcd2d9796d43f2f2c892cb4c4edafda68f'
+        '8b4d6d51ff981783dd0fb9e33ae0c96accd8b36b4de22370145fdf85e281ac74b02a44cb7ed9e65ac1057e9ee2ab3cb97bbb211712203c702aee0945e1503348')
