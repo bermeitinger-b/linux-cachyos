@@ -149,10 +149,10 @@ elif [ -n "$_use_llvm_lto" ]  ||  [[ "$_use_lto_suffix" = "n" ]]; then
     pkgsuffix=cachyos-rc
     pkgbase=linux-$pkgsuffix
 fi
-_major=6.9
+_major=6.10
 _minor=0
 #_minorc=$((_minor+1))
-_rcver=rc7
+_rcver=rc1
 pkgver=${_major}.${_rcver}
 #_stable=${_major}.${_minor}
 #_stable=${_major}
@@ -160,7 +160,7 @@ _stable=${_major}-${_rcver}
 _srcname=linux-${_stable}
 #_srcname=linux-${_major}
 pkgdesc='Linux SCHED-EXT + Cachy Sauce Kernel by CachyOS with other patches and improvements'
-pkgrel=5
+pkgrel=1
 _kernver=$pkgver-$pkgrel
 arch=('x86_64' 'x86_64_v3')
 url="https://github.com/CachyOS/linux-cachyos"
@@ -179,7 +179,7 @@ if [[ "$_use_llvm_lto" = "thin" || "$_use_llvm_lto" = "full" ]] || [ -n "$_use_k
 fi
 
 _patchsource="https://raw.githubusercontent.com/cachyos/kernel-patches/master/${_major}"
-_nv_ver=550.78
+_nv_ver=555.42.02
 _nv_pkg="NVIDIA-Linux-x86_64-${_nv_ver}"
 _nv_open_pkg="open-gpu-kernel-modules-${_nv_ver}"
 source=(
@@ -202,22 +202,19 @@ fi
 # NVIDIA pre-build module support
 if [ -n "$_build_nvidia" ]; then
     source+=("https://us.download.nvidia.com/XFree86/Linux-x86_64/${_nv_ver}/${_nv_pkg}.run"
-             "${_patchsource}/misc/nvidia/make-modeset-fbdev-default.patch"
-             "${_patchsource}/misc/nvidia/0001-NVIDIA-take-modeset-ownership-early.patch")
+             "${_patchsource}/misc/nvidia/make-modeset-fbdev-default.patch")
 fi
 
 if [ -n "$_build_nvidia_open" ]; then
     source+=("nvidia-open-${_nv_ver}.tar.gz::https://github.com/NVIDIA/open-gpu-kernel-modules/archive/refs/tags/${_nv_ver}.tar.gz"
              "${_patchsource}/misc/nvidia/make-modeset-fbdev-default.patch"
-             "${_patchsource}/misc/nvidia/0001-NVIDIA-take-modeset-ownership-early.patch"
              "${_patchsource}/misc/nvidia/nvidia-open-gcc-ibt-sls.patch")
 fi
 
 ## List of CachyOS schedulers
 case "$_cpusched" in
-    cachyos) # CachyOS Scheduler (Sched-ext + BORE + Cachy Sauce)
-        source+=("${_patchsource}/sched/0001-sched-ext.patch"
-                 "${_patchsource}/sched/0001-bore-cachy-ext.patch");;
+    cachyos) # CachyOS Scheduler (BORE + Cachy Sauce)
+        source+=("${_patchsource}/sched/0001-bore-cachy.patch");;
     bore) ## BORE Scheduler
         source+=("${_patchsource}/sched/0001-bore-cachy.patch");;
     echo) ## ECHO Scheduler
@@ -256,7 +253,6 @@ prepare() {
         src="${src##*/}"
         src="${src%.zst}"
         [[ $src = make-modeset-fbdev-default.patch ]] && continue
-        [[ $src = 0001-NVIDIA-take-modeset-ownership-early.patch ]] && continue
         [[ $src = nvidia-open-gcc-ibt-sls.patch ]] && continue
         [[ $src = *.patch ]] || continue
         echo "Applying patch $src..."
@@ -508,13 +504,10 @@ prepare() {
 
         # Use fbdev and modeset as default
         patch -Np1 -i "${srcdir}/make-modeset-fbdev-default.patch" -d "${srcdir}/${_nv_pkg}/kernel"
-        patch -Np2 --no-backup-if-mismatch -i "${srcdir}/0001-NVIDIA-take-modeset-ownership-early.patch" -d "${srcdir}/${_nv_pkg}/kernel"
     fi
 
     if [ -n "$_build_nvidia_open" ]; then
         patch -Np1 -i "${srcdir}/make-modeset-fbdev-default.patch" -d "${srcdir}/${_nv_open_pkg}/kernel-open"
-        patch -Np2 --no-backup-if-mismatch -i "${srcdir}/0001-NVIDIA-take-modeset-ownership-early.patch" -d "${srcdir}/${_nv_open_pkg}/kernel-open"
-
         # Fix for https://bugs.archlinux.org/task/74886
         patch -Np1 --no-backup-if-mismatch -i "${srcdir}/nvidia-open-gcc-ibt-sls.patch" -d "${srcdir}/${_nv_open_pkg}"
     fi
@@ -735,9 +728,8 @@ for _p in "${pkgname[@]}"; do
     }"
 done
 
-b2sums=('9f346bbd6c540249de07d2e20efcdaecec7159a2ef04d9208dc0ee5165fc1bab80fc1424e1391ec4aa8c1682c49989188beba902d34472bbf39ae3440845d216'
-        '2e008839b9466532b887066cb8772bde09f80c5ef11ae3b6bf2c45441278df79bbe70ffddc0010b48a62592849393dded00461ef741bfcd6b82e738d706713ff'
+b2sums=('e539dd313d9cb94853b46a1ff352fb456c3b8df3db1c4dbdc58781d402dbdfd55fec6f4fdf21fe3c496dede7e44b7d74a0d778f52098d3591f5719f1cbaadf88'
+        '16f9db2b965d0d16cd925189e72aaabf915744b45e318c6b71912715e9cf140a7d76e5833da43d6d2f1361a8a9a72d7fa715f72d72d85cecae199ece493e273b'
         '43ef7a347878592740d9eb23b40a56083fa747f7700fa1e2c6d039d660c0b876d99bf1a3160e15d041fb13d45906cdb5defef034d4d0ae429911864239c94d8d'
-        'f7c64bdfd1afc521e32cbe2d025aa9df201c7ee1462b921447cf5df5abdbfce4a555fe4569773dbc6e0ad77965cc64a685eb866f882a9917a764861089505a76'
-        '1ebb80c0e3838f017062b2de09ca1a2a8989b7ddadc817497aa37de29c17e99397e2d35cb64b7d9c1f1eec4281f0a3dcd2d9796d43f2f2c892cb4c4edafda68f'
-        '8b4d6d51ff981783dd0fb9e33ae0c96accd8b36b4de22370145fdf85e281ac74b02a44cb7ed9e65ac1057e9ee2ab3cb97bbb211712203c702aee0945e1503348')
+        'ee5dc92b38c4ae63547dd3de037fad68e78b0939174735ede7cfedbd63af652bfc8717b1513a3964e8ed924e219b06d6a2d97f31363b21de71a03cc6f4b015d8'
+        '85d71281c02bf835cd1ceb02716fc4aca0ef55eb025eb1b2a16486d053922cf85e820401d9852537c49147e57cf2f2cd61f84bc12b30a8a97790450adcb4e5be')
