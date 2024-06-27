@@ -163,7 +163,7 @@ _stable=${_major}-${_rcver}
 _srcname=linux-${_stable}
 #_srcname=linux-${_major}
 pkgdesc='Linux SCHED-EXT + Cachy Sauce Kernel by CachyOS with other patches and improvements'
-pkgrel=1
+pkgrel=2
 _kernver=$pkgver-$pkgrel
 arch=('x86_64' 'x86_64_v3')
 url="https://github.com/CachyOS/linux-cachyos"
@@ -182,7 +182,7 @@ if [[ "$_use_llvm_lto" = "thin" || "$_use_llvm_lto" = "full" ]] || [ -n "$_use_k
 fi
 
 _patchsource="https://raw.githubusercontent.com/cachyos/kernel-patches/master/${_major}"
-_nv_ver=555.52.04
+_nv_ver=555.58
 _nv_pkg="NVIDIA-Linux-x86_64-${_nv_ver}"
 _nv_open_pkg="open-gpu-kernel-modules-${_nv_ver}"
 source=(
@@ -209,7 +209,7 @@ if [ -n "$_build_nvidia" ]; then
 fi
 
 if [ -n "$_build_nvidia_open" ]; then
-    source+=("nvidia-open-${_nv_ver}.tar.gz::https://github.com/NVIDIA/open-gpu-kernel-modules/archive/refs/tags/${_nv_ver}.tar.gz"
+    source+=("nvidia-open-${_nv_ver}.tar.gz::https://github.com/CachyOS/open-gpu-kernel-modules/archive/refs/tags/${_nv_ver}.tar.gz"
              "${_patchsource}/misc/nvidia/make-modeset-fbdev-default.patch"
              "${_patchsource}/misc/nvidia/nvidia-open-gcc-ibt-sls.patch")
 fi
@@ -751,7 +751,7 @@ for _p in "${pkgname[@]}"; do
 done
 
 b2sums=('0a5915aec7985441b5386980360d1e9f2210e28de4f5f22375eb90a66a820ce3f5d63bf645ee3d399941bb36481ab5755c88789f8fcff34130d504b463694da6'
-        'c86334d81ff116345e83d288dbe3a695907cc4219ad53dcbff9d2cb81e4290bf5767294734db8cd78169ed1f636afd6cba4d7053c77614f4e6a243325ea23369'
+        '587e4196f7eb3248612e332bb60ea2bbd0856e7523d1037d157e36d589c92df558a17f09d72b8eb37d8b48e6c424dfb8bf807b3ff9f05aef87228bb69d95198f'
         'b1e964389424d43c398a76e7cee16a643ac027722b91fe59022afacb19956db5856b2808ca0dd484f6d0dfc170482982678d7a9a00779d98cd62d5105200a667'
         '078d2f43fc42a9f344483a944372172a8bd06aa05703810b0ceb4a160bf575385a754b0578e3d043b9718d2a73b5903a78da2ba5884e42bf31ab44e967e7835d'
         '868b7174aadeb43a3affc912ec958adff8a23533340e8e12a2c6cc7f6d6cfadaa6a2d2cc20effa00f4e8c8b1b3d265dce45674c7bea249bf1cd0b52f8adb165e'
