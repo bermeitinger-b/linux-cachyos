@@ -303,12 +303,16 @@ prepare() {
     ### Use autooptimization
     if [ -n "$_use_auto_optimization" ]; then
         "${srcdir}"/auto-cpu-optimization.sh
+    else
+        "No auto optimization selected"
     fi
 
     ### Selecting CachyOS config
     if [ -n "$_cachy_config" ]; then
         echo "Enabling CachyOS config..."
         scripts/config -e CACHY
+    else
+        "Not using CachyOS config"
     fi
 
     ### Selecting the CPU scheduler
@@ -331,6 +335,8 @@ prepare() {
     if [ -n "$_use_kcfi" ]; then
         echo "Enabling kCFI"
         scripts/config -e ARCH_SUPPORTS_CFI_CLANG -e CFI_CLANG -e CFI_AUTO_DEFAULT
+    else
+        echo "Disabling kCFI"
     fi
 
     ### Select LLVM level
@@ -375,6 +381,8 @@ prepare() {
             -d NEED_MULTIPLE_NODES \
             -d NUMA_BALANCING \
             -d NUMA_BALANCING_DEFAULT_ENABLED
+    else
+        echo "NUMA is enabled"
     fi
 
     ### Setting NR_CPUS
@@ -393,6 +401,8 @@ prepare() {
         echo "Setting performance governor..."
         scripts/config -d CPU_FREQ_DEFAULT_GOV_SCHEDUTIL \
             -e CPU_FREQ_DEFAULT_GOV_PERFORMANCE
+    else
+        echo "Not setting performance governor"
     fi
 
     ### Select tick type
@@ -428,6 +438,8 @@ prepare() {
         echo "Enabling KBUILD_CFLAGS -O3..."
         scripts/config -d CC_OPTIMIZE_FOR_PERFORMANCE \
             -e CC_OPTIMIZE_FOR_PERFORMANCE_O3
+    else
+        echo "Not enabling KBUILD_CFLAGS -O3..."
     fi
 
     ### Enable Os
@@ -435,7 +447,9 @@ prepare() {
         echo "Enabling KBUILD_CFLAGS -Os..."
         scripts/config -d CC_OPTIMIZE_FOR_PERFORMANCE \
             -e CONFIG_CC_OPTIMIZE_FOR_SIZE
-    fi
+    else
+        echo "Not enabling KBUILD_CFLAGS -Os..."
+     fi
 
     ### Enable bbr3
     if [ -n "$_tcp_bbr3" ]; then
@@ -445,6 +459,8 @@ prepare() {
             -e TCP_CONG_BBR \
             -e DEFAULT_BBR \
             --set-str DEFAULT_TCP_CONG bbr
+    else
+        echo "Not enabling TCP_CONG_BBR3..."
     fi
 
     ### Select THP
@@ -468,6 +484,8 @@ prepare() {
             -e DAMON_PADDR \
             -e DAMON_RECLAIM \
             -e DAMON_LRU_SORT
+    else
+        echo "Not enabling DAMON..."
     fi
 
     echo "Enable USER_NS_UNPRIVILEGED"
@@ -502,7 +520,7 @@ prepare() {
 
     if [ -f "${srcdir}/myconfig.sh" ]; then
         echo "Applying custom config..."
-        source "${srcdir}/myconfig.sh"
+        "${srcdir}"/myconfig.sh
     fi
 
     ### Rewrite configuration
@@ -790,6 +808,6 @@ b2sums=('e7750c0878d71a56a0ce52d4c4c912199dad5bf5e2e8f872585a6494afbb37cbd852e61
         'fb3a58d6776bb2601e54131dfdbd0f70b4f5a053ca9d8c2adfb5c314a7ceca4add604418622e2a2c63efa6c7dc6b457efcbdf914bc6701af967c2910aa205ea6'
         'b1e964389424d43c398a76e7cee16a643ac027722b91fe59022afacb19956db5856b2808ca0dd484f6d0dfc170482982678d7a9a00779d98cd62d5105200a667'
         '8f4572a5abfba7c8bc1436e4b39abb60b8cce3d1986a9eda72338ed6fe7572feff9f8c4ac17e2d3aee8afbc06910cbaed701733f4990a39cdd9c7438ad225a51'
-        '7f450cf2599bef313b82056867205991d73f59cb79479862344bd2a888ec610235c4c9716589a35c7cb387d954a9e6bae180fbaad50a891f6e8a7ec244eda3c0'
+        '2e83659ddbe133ca821ffaf802da0fad23b6a215635db41364e0b35b7344fc0764ecd237dca107c3a400ac6e66cce011765c6f0b8c0b532b4918d4068956437c'
         '1c053768249d608a69144c005d653839a6d56f757ef36ebf6089f6754332a4247d5509bb9e6d2ab4a0518960fac24bf2536c0b817284bd9c9ca5b4732943b365'
         '35bca0692819dec7da72d1069bf23652a7ed2e0493c0a1541c6edcb85b71636e57ccf259e53aa6b853c4dd546dafcffe6c319b526deba1c4adcd4aa3853ba461')
