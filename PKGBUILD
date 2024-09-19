@@ -201,7 +201,9 @@ source=(
     "https://cdn.kernel.org/pub/linux/kernel/v${pkgver%%.*}.x/${_srcname}.tar.xz"
     "config"
     "auto-cpu-optimization.sh"
-    "${_patchsource}/all/0001-cachyos-base-all.patch")
+    "${_patchsource}/all/0001-cachyos-base-all.patch"
+    "myconfig.sh"
+)
 
 # WARNING The ZFS module doesn't build with selected RT sched due to licensing issues.
 if [[ "$_cpusched" = "rt" || "$_cpusched" = "rt-bore" ]]; then
@@ -498,6 +500,11 @@ prepare() {
         fi
     fi
 
+    if [ -f "${srcdir}/myconfig.sh" ]; then
+        echo "Applying custom config..."
+        source "${srcdir}/myconfig.sh"
+    fi
+
     ### Rewrite configuration
     echo "Rewrite configuration..."
     make "${BUILD_FLAGS[@]}" prepare
@@ -782,6 +789,7 @@ done
 b2sums=('e7750c0878d71a56a0ce52d4c4c912199dad5bf5e2e8f872585a6494afbb37cbd852e612a6858936d2dc9b7776a3933818f540db408d57e90d18ea5249bba7ab'
         'fb3a58d6776bb2601e54131dfdbd0f70b4f5a053ca9d8c2adfb5c314a7ceca4add604418622e2a2c63efa6c7dc6b457efcbdf914bc6701af967c2910aa205ea6'
         'b1e964389424d43c398a76e7cee16a643ac027722b91fe59022afacb19956db5856b2808ca0dd484f6d0dfc170482982678d7a9a00779d98cd62d5105200a667'
-        'ab6c372dbc0f4269d44d4900217cd5a784d03bfb498f673090134b86933f6d8cd3eefa12c8550dd4f135fbf4572f0f2bf17c388e7e7579d168466bdd1db467bc'
+        '8f4572a5abfba7c8bc1436e4b39abb60b8cce3d1986a9eda72338ed6fe7572feff9f8c4ac17e2d3aee8afbc06910cbaed701733f4990a39cdd9c7438ad225a51'
+        '7f450cf2599bef313b82056867205991d73f59cb79479862344bd2a888ec610235c4c9716589a35c7cb387d954a9e6bae180fbaad50a891f6e8a7ec244eda3c0'
         '1c053768249d608a69144c005d653839a6d56f757ef36ebf6089f6754332a4247d5509bb9e6d2ab4a0518960fac24bf2536c0b817284bd9c9ca5b4732943b365'
         '35bca0692819dec7da72d1069bf23652a7ed2e0493c0a1541c6edcb85b71636e57ccf259e53aa6b853c4dd546dafcffe6c319b526deba1c4adcd4aa3853ba461')
