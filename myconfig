@@ -76,7 +76,6 @@ scripts/config --disable FIREWIRE_NOSY
 scripts/config --disable FPGA
 scripts/config --disable GNSS
 scripts/config --disable GOOGLE_FIRMWARE
-scripts/config --disable GPIO
 scripts/config --disable HAMRADIO
 scripts/config --disable IEEE802154_DRIVERS
 scripts/config --disable IIO
@@ -98,7 +97,5 @@ scripts/config --disable SLIP
 scripts/config --disable SUNRPC
 scripts/config --disable TAP
 scripts/config --disable USB_SERIAL
-scripts/config --disable WAN
-scripts/config --disable WWAN
 scripts/config --disable X86_NUMACHIP
 scripts/config --disable X86_UV
