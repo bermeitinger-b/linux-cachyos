@@ -99,3 +99,13 @@ scripts/config --disable TAP
 scripts/config --disable USB_SERIAL
 scripts/config --disable X86_NUMACHIP
 scripts/config --disable X86_UV
+
+# Disable new modules
+scripts/config --disable GPIO
+scripts/config --disable GPIO_AMD8111
+scripts/config --disable GPIO_BT8XX
+scripts/config --disable GPIO_ML_IOH
+scripts/config --disable GPIO_IDIO_16
+scripts/config --disable GPIO_IDIO_24
+scripts/config --disable GPIO_RDC321X
+
