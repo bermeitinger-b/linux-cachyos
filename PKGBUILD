@@ -1,4 +1,6 @@
-# Maintainer: Peter Jung ptr1337 <admin@ptr1337.dev> && Piotr Gorski <piotrgorski@cachyos.org>
+# Maintainer: Peter Jung ptr1337 <admin@ptr1337.dev>
+# Maintainer: Piotr Gorski <piotrgorski@cachyos.org>
+# Maintainer: Vasiliy Stelmachenok <ventureo@cachyos.org>
 # Contributor: Jan Alexander Steffens (heftig) <jan.steffens@gmail.com>
 # Contributor: Tobias Powalowski <tpowa@archlinux.org>
 # Contributor: Thomas Baechler <thomas@archlinux.org>
@@ -49,6 +51,9 @@ _NUMAdisable=${_NUMAdisable-}
 # More at this wiki page ---> https://wiki.archlinux.org/index.php/Modprobed-db
 _localmodcfg=${_localmodcfg-}
 
+# Path to the list of used modules
+_localmodcfg_path=${_localmodcfg_path-"$HOME/.config/modprobed.db"}
+
 # Use the current kernel's .config file
 # Enabling this option will use the .config of the RUNNING kernel rather than
 # the ARCH defaults. Useful when the package gets updated and you already went
@@ -58,10 +63,6 @@ _use_current=${_use_current-}
 
 ### Enable KBUILD_CFLAGS -O3
 _cc_harder=${_cc_harder-y}
-
-### Enable KBUILD_CFLAGS -Os
-## DO NOT SET, THIS IS FOR INTERNAL CI USE ONLY.
-_cc_size=${_cc_size-}
 
 ### Set this to your number of threads you have in your machine otherwise it will default to 320
 _nr_cpus=${_nr_cpus-}
@@ -150,17 +151,17 @@ elif [ -n "$_use_llvm_lto" ]  ||  [[ "$_use_lto_suffix" = "n" ]]; then
     pkgbase="linux-$_pkgsuffix"
 fi
 _major=6.11
-_minor=0
+_minor=1
 #_minorc=$((_minor+1))
 #_rcver=rc8
 pkgver=${_major}.${_minor}
-#_stable=${_major}.${_minor}
-_stable=${_major}
+_stable=${_major}.${_minor}
+#_stable=${_major}
 #_stablerc=${_major}-${_rcver}
 _srcname=linux-${_stable}
 #_srcname=linux-${_major}
 pkgdesc='Linux SCHED-EXT + BORE + Cachy Sauce Kernel by CachyOS with other patches and improvements'
-pkgrel=5
+pkgrel=1
 _kernver="$pkgver-$pkgrel"
 _kernuname="${pkgver}-${_pkgsuffix}"
 arch=('x86_64')
@@ -218,16 +219,17 @@ fi
 # NVIDIA pre-build module support
 if [ -n "$_build_nvidia" ]; then
     source+=("https://us.download.nvidia.com/XFree86/Linux-x86_64/${_nv_ver}/${_nv_pkg}.run"
-             "${_patchsource}/misc/nvidia/make-modeset-fbdev-default.patch"
-             "${_patchsource}/misc/nvidia/6.11-fbdev.patch")
+             "${_patchsource}/misc/nvidia/0001-Make-modeset-and-fbdev-default-enabled.patch"
+             "${_patchsource}/misc/nvidia/0004-6.11-Add-fix-for-fbdev.patch")
 fi
 
 if [ -n "$_build_nvidia_open" ]; then
     source+=("nvidia-open-${_nv_ver}.tar.gz::https://github.com/NVIDIA/open-gpu-kernel-modules/archive/refs/tags/${_nv_ver}.tar.gz"
-             "${_patchsource}/misc/nvidia/make-modeset-fbdev-default.patch"
-             "${_patchsource}/misc/nvidia/nvidia-open-gcc-ibt-sls.patch"
-             "${_patchsource}/misc/nvidia/fix-zen5.patch"
-             "${_patchsource}/misc/nvidia/6.11-fbdev.patch")
+             "${_patchsource}/misc/nvidia/0001-Make-modeset-and-fbdev-default-enabled.patch"
+             "${_patchsource}/misc/nvidia/0002-Do-not-error-on-unkown-CPU-Type-and-add-Zen5-support.patch"
+             "${_patchsource}/misc/nvidia/0003-Add-IBT-Support.patch"
+             "${_patchsource}/misc/nvidia/0004-6.11-Add-fix-for-fbdev.patch"
+             "${_patchsource}/misc/nvidia/0005-6.12-drm_outpull_pill-changed-check.patch")
 fi
 
 ## List of CachyOS schedulers
@@ -259,7 +261,7 @@ export KBUILD_BUILD_HOST=cachyos
 export KBUILD_BUILD_USER="$pkgbase"
 export KBUILD_BUILD_TIMESTAMP="$(date -Ru${SOURCE_DATE_EPOCH:+d @$SOURCE_DATE_EPOCH})"
 
-_die() { error "$@" ; exit; }
+_die() { error "$@" ; exit 1; }
 
 prepare() {
     cd "$_srcname"
@@ -271,12 +273,10 @@ prepare() {
     local src
     for src in "${source[@]}"; do
         src="${src%%::*}"
+        # Skip nvidia patches
+        [[ "$src" == "${_patchsource}"/misc/nvidia/*.patch ]] && continue
         src="${src##*/}"
         src="${src%.zst}"
-        [[ $src = make-modeset-fbdev-default.patch ]] && continue
-        [[ $src = nvidia-open-gcc-ibt-sls.patch ]] && continue
-        [[ $src = fix-zen5.patch ]] && continue
-        [[ $src = 6.11-fbdev.patch ]] && continue
         [[ $src = *.patch ]] || continue
         echo "Applying patch $src..."
         patch -Np1 < "../$src"
@@ -288,16 +288,16 @@ prepare() {
     ### Select CPU optimization
     if [ -n "$_processor_opt" ]; then
         MARCH="${_processor_opt^^}"
-        MARCH2=${MARCH}
 
-        if [[ ! "$MARCH" =~ GENERIC* ]]; then
-            MARCH2="M${MARCH}"
-        else
-            MARCH2="${MARCH/V/CPU}"
+        if [ "$MARCH" != "GENERIC" ]; then
+            if [[ "$MARCH" =~ GENERIC_V[1-4] ]]; then
+                X86_64_LEVEL="${MARCH//GENERIC_V}"
+                scripts/config --set-val X86_64_VERSION "${X86_64_LEVEL}"
+            else
+                scripts/config -k -d CONFIG_GENERIC_CPU
+                scripts/config -k -e "CONFIG_M${MARCH}"
+            fi
         fi
-
-        scripts/config -k -d CONFIG_GENERIC_CPU
-        scripts/config -k -e "CONFIG_${MARCH2}"
     fi
 
     ### Use autooptimization
@@ -442,14 +442,21 @@ prepare() {
         echo "Not enabling KBUILD_CFLAGS -O3..."
     fi
 
-    ### Enable Os
-    if [ -n "$_cc_size" ] && [ -z "$_cc_harder" ]; then
-        echo "Enabling KBUILD_CFLAGS -Os..."
+    ### CI-only stuff
+    if [[ -n "$CI" || -n "$GITHUB_RUN_ID" ]]; then
+        echo "Detected build inside CI"
         scripts/config -d CC_OPTIMIZE_FOR_PERFORMANCE \
-            -e CONFIG_CC_OPTIMIZE_FOR_SIZE
-    else
-        echo "Not enabling KBUILD_CFLAGS -Os..."
-     fi
+            -d CC_OPTIMIZE_FOR_PERFORMANCE_O3 \
+            -e CONFIG_CC_OPTIMIZE_FOR_SIZE \
+            -d SLUB_DEBUG \
+            -d PM_DEBUG \
+            -d PM_ADVANCED_DEBUG \
+            -d PM_SLEEP_DEBUG \
+            -d ACPI_DEBUG \
+            -d LATENCYTOP \
+            -d SCHED_DEBUG \
+            -d DEBUG_PREEMPT
+    fi
 
     ### Enable bbr3
     if [ -n "$_tcp_bbr3" ]; then
@@ -496,9 +503,9 @@ prepare() {
     ### Optionally load needed modules for the make localmodconfig
     # See https://aur.archlinux.org/packages/modprobed-db
     if [ -n "$_localmodcfg" ]; then
-        if [ -e "$HOME/.config/modprobed.db" ]; then
+        if [ -e "$_localmodcfg_path" ]; then
             echo "Running Steven Rostedt's make localmodconfig now"
-            make "${BUILD_FLAGS[@]}" LSMOD="$HOME/.config/modprobed.db" localmodconfig
+            make "${BUILD_FLAGS[@]}" LSMOD="${_localmodcfg_path}" localmodconfig
         else
             _die "No modprobed.db data found"
         fi
@@ -541,19 +548,21 @@ prepare() {
         sh "${_nv_pkg}.run" --extract-only
 
         # Use fbdev and modeset as default
-        patch -Np1 -i "${srcdir}/make-modeset-fbdev-default.patch" -d "${srcdir}/${_nv_pkg}/kernel"
+        patch -Np1 -i "${srcdir}/0001-Make-modeset-and-fbdev-default-enabled.patch" -d "${srcdir}/${_nv_pkg}/kernel"
         # Fix broken fbdev on 6.11
-        patch -Np2 -i "${srcdir}/6.11-fbdev.patch" -d "${srcdir}/${_nv_pkg}/kernel"
+        patch -Np2 -i "${srcdir}/0004-6.11-Add-fix-for-fbdev.patch" -d "${srcdir}/${_nv_pkg}/kernel"
     fi
 
     if [ -n "$_build_nvidia_open" ]; then
-        patch -Np1 -i "${srcdir}/make-modeset-fbdev-default.patch" -d "${srcdir}/${_nv_open_pkg}/kernel-open"
+        patch -Np1 -i "${srcdir}/0001-Make-modeset-and-fbdev-default-enabled.patch" -d "${srcdir}/${_nv_open_pkg}/kernel-open"
         # Fix for https://bugs.archlinux.org/task/74886
-        patch -Np1 --no-backup-if-mismatch -i "${srcdir}/nvidia-open-gcc-ibt-sls.patch" -d "${srcdir}/${_nv_open_pkg}"
+        patch -Np1 --no-backup-if-mismatch -i "${srcdir}/0003-Add-IBT-Support.patch" -d "${srcdir}/${_nv_open_pkg}"
         # Fix for Zen5 error print in dmesg
-        patch -Np1 --no-backup-if-mismatch -i "${srcdir}/fix-zen5.patch" -d "${srcdir}/${_nv_open_pkg}"
+        patch -Np1 --no-backup-if-mismatch -i "${srcdir}/0002-Do-not-error-on-unkown-CPU-Type-and-add-Zen5-support.patch" -d "${srcdir}/${_nv_open_pkg}"
         # Fix broken fbdev on 6.11
-        patch -Np1 --no-backup-if-mismatch -i "${srcdir}/6.11-fbdev.patch" -d "${srcdir}/${_nv_open_pkg}"
+        patch -Np1 --no-backup-if-mismatch -i "${srcdir}/0004-6.11-Add-fix-for-fbdev.patch" -d "${srcdir}/${_nv_open_pkg}"
+        # Fix for 6.12 Module Compilation
+        patch -Np1 --no-backup-if-mismatch -i "${srcdir}/0005-6.12-drm_outpull_pill-changed-check.patch" -d "${srcdir}/${_nv_open_pkg}"
     fi
 }
 
@@ -562,15 +571,14 @@ build() {
     make "${BUILD_FLAGS[@]}" -j"$(nproc)" all
     make -C tools/bpf/bpftool vmlinux.h feature-clang-bpf-co-re=1
 
+    local MODULE_FLAGS=(
+       KERNEL_UNAME="${_kernuname}"
+       IGNORE_PREEMPT_RT_PRESENCE=1
+       SYSSRC="${srcdir}/${_srcname}"
+       SYSOUT="${srcdir}/${_srcname}"
+    )
     if [ -n "$_build_nvidia" ]; then
-        local MODULE_FLAGS=(
-           KERNEL_UNAME="${_kernuname}"
-           IGNORE_PREEMPT_RT_PRESENCE=1
-           NV_EXCLUDE_BUILD_MODULES='__EXCLUDE_MODULES'
-           SYSSRC="${srcdir}/${_srcname}"
-           SYSOUT="${srcdir}/${_srcname}"
-        )
-
+        MODULE_FLAGS+=(NV_EXCLUDE_BUILD_MODULES='__EXCLUDE_MODULES')
         cd "${srcdir}/${_nv_pkg}/kernel"
         make "${BUILD_FLAGS[@]}" "${MODULE_FLAGS[@]}" -j"$(nproc)" modules
 
@@ -578,13 +586,7 @@ build() {
 
     if [ -n "$_build_nvidia_open" ]; then
         cd "${srcdir}/${_nv_open_pkg}"
-        local MODULE_FLAGS=(
-           KERNEL_UNAME="${_kernuname}"
-           IGNORE_PREEMPT_RT_PRESENCE=1
-           IGNORE_CC_MISMATCH=yes
-           SYSSRC="${srcdir}/${_srcname}"
-           SYSOUT="${srcdir}/${_srcname}"
-        )
+        MODULE_FLAGS+=(IGNORE_CC_MISMATCH=yes)
         CFLAGS= CXXFLAGS= LDFLAGS= make "${BUILD_FLAGS[@]}" "${MODULE_FLAGS[@]}" -j"$(nproc)" modules
     fi
 
@@ -793,10 +795,23 @@ for _p in "${pkgname[@]}"; do
 done
 
 b2sums=('21c8c5dbbcec42c6dd97c624c90aa536de41a9bf629b9c68f0a413ca96ebd845afbc8ec791d2c904604130dc0e7998287e4e6e2788df6fad57eecf9192906c9a'
-        'e7750c0878d71a56a0ce52d4c4c912199dad5bf5e2e8f872585a6494afbb37cbd852e612a6858936d2dc9b7776a3933818f540db408d57e90d18ea5249bba7ab'
-        'b338ac759eaa3ff4c3fd34bea73fd4dbca1513d35b5a9e44cff1ac8ecb6d29f3db81e85a529fe854a20bc92aff19d215e578a47180242c9951879dd40f79e329'
+        'ac9927d74542a2d244b9d683920363ec2dbbe851ae0e069b278f1a0ba82c58b00f0f0312104b46f1b8c06585c2e6acb7eb1e63bd28499891f629c00f9a32f6b5'
+        'cd69b5c9fca0788936a96b4e64f4d56f6e70818591587062b5ef4ae98e401d15ffddb910cdc2a1c70516c183bb2b4f2be955d7b1e1fec9bb37e632064068abae'
         'b1e964389424d43c398a76e7cee16a643ac027722b91fe59022afacb19956db5856b2808ca0dd484f6d0dfc170482982678d7a9a00779d98cd62d5105200a667'
         '8f4572a5abfba7c8bc1436e4b39abb60b8cce3d1986a9eda72338ed6fe7572feff9f8c4ac17e2d3aee8afbc06910cbaed701733f4990a39cdd9c7438ad225a51'
-        'c7294a689f70b2a44b0c4e9f00c61dbd59dd7063ecbe18655c4e7f12e21ed7c5bb4f5169f5aa8623b1c59de7b2667facb024913ecb9f4c650dabce4e8a7e5452'
         '1c053768249d608a69144c005d653839a6d56f757ef36ebf6089f6754332a4247d5509bb9e6d2ab4a0518960fac24bf2536c0b817284bd9c9ca5b4732943b365'
         'ba8cf5f2cca0303a914acbae0f4786b9397d7f0acb2f504c8bdec9411c62050e72be2cc6f5b4a015a05407cc92bfc3df8fcf43b7d50c03e38c3ad5d27ba1cee6')
+sha512sums=('d11e9fd9883f61e56628097cea840826156af2edffabb4d546ad37b70685068324393518bae83fb37ea2ce9b7a490d80e20f43344a923d32568619fd189c57cc'
+            '026b8fe7a1eaacf832e9d0da08861869542248ef89daade3292d1e11b886788e2b1e4c8828b0509c454aedfdc7f22e9afbb446033072ebabf8c02fd5f5bf0d7f'
+            '2be47e2201ebdefe6ec4f3577425cd47518a63c0e41a03d4a71233a3374e6b87400e63d86614b18d30ff0abce0cd66f7d87eed3288802e6d3e5246677c750bc1'
+            '5c5ee5fd152deff16cf806de9dd8703b410732981047ba5a74c2dfd8c8fdea336a4b02695d65847a4be01aec5324ab730dc1b88a9f548ace495268bc7441cf97'
+            '12ca02a28dd4090986d3a209b85dec3becb0b80ee4d89d460389acd405e5a664ab0f7ad8c3f9aece91c7aab02cbf0a47d7d81e8040beb6b617dec29d8f3a114d'
+            'd3fe510025f096dc18164cfdb8b305527266edbc20d8b386832b561926db08a414c3522e4de987be8dc9469c2278f0cccf4115e57f0c51490aff30bba703b161'
+            '50fdf15a5237258ea73c30bb5d487ae8b128f015ece2908ed02f5810c4c7a763fc1d72ef898f8861efb12da02cc36d8273cafbd93dc4a1720fafa0b5f59bc27c')
+sha256sums=('953af880fd88b4a6dbbafaf55bc61cb5f4f170ddf1aa1d5b88868fbab49e3a2b'
+            '2a372373b4e1eaf55f2a2f104bfa91477ec9b263acf8f3aed08f4d8bdc78ee3d'
+            'ddee4faa970363aae1cadb1f58a473db6e62f4257f9899fc49c7d50b53074b15'
+            'a91249420d61edb17b8659ab3feca86d24cf3b1c941b14f232c47064fa4f4ce7'
+            '14822d236afb18de114008fcb6e805134a9915484182a673284810b913e3864e'
+            '529175f06cf878e29f1b619ae2207f307a2b113e43fbb53d521244196826f1fe'
+            '1f27ef6a3e2bff41198fc449244df860bd1093f82f951a13438063b02e4a4142')
