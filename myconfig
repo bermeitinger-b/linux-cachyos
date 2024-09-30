@@ -1,9 +1,6 @@
 scripts/config --set-str DEFAULT_HOSTNAME "archlinux"
 scripts/config --enable BTRFS_FS
 
-# Disable AMD-PMF until they fix it
-scripts/config --disable AMD_PMF
-
 # Compress modules (_compress_modules=y)
 scripts/config --enable MODULE_COMPRESS_ZSTD
 
