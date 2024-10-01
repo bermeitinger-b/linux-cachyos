@@ -142,12 +142,13 @@ _build_nvidia_open=${_build_nvidia_open-}
 # Build a debug package with non-stripped vmlinux
 _build_debug=${_build_debug-}
 
+_pkgsuffix="mycachyos"
+
 if [[ "$_use_llvm_lto" = "thin" || "$_use_llvm_lto" = "full" ]] && [ "$_use_lto_suffix" = "y"  ]; then
-    _pkgsuffix=cachyos-lto
+    _pkgsuffix="${_pkgsuffix}-lto"
     pkgbase="linux-$_pkgsuffix"
 
 elif [ -n "$_use_llvm_lto" ]  ||  [[ "$_use_lto_suffix" = "n" ]]; then
-    _pkgsuffix=cachyos
     pkgbase="linux-$_pkgsuffix"
 fi
 _major=6.11
