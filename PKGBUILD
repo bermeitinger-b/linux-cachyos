@@ -152,7 +152,7 @@ elif [ -n "$_use_llvm_lto" ]  ||  [[ "$_use_lto_suffix" = "n" ]]; then
     pkgbase="linux-$_pkgsuffix"
 fi
 _major=6.11
-_minor=1
+_minor=2
 #_minorc=$((_minor+1))
 #_rcver=rc8
 pkgver=${_major}.${_minor}
@@ -162,7 +162,7 @@ _stable=${_major}.${_minor}
 _srcname=linux-${_stable}
 #_srcname=linux-${_major}
 pkgdesc='Linux SCHED-EXT + BORE + Cachy Sauce Kernel by CachyOS with other patches and improvements'
-pkgrel=1
+pkgrel=2
 _kernver="$pkgver-$pkgrel"
 _kernuname="${pkgver}-${_pkgsuffix}"
 arch=('x86_64')
@@ -320,12 +320,12 @@ prepare() {
     [ -z "$_cpusched" ] && _die "The value is empty. Choose the correct one again."
 
     case "$_cpusched" in
-        cachyos) scripts/config -e SCHED_CLASS_EXT -e SCHED_BORE --set-val MIN_BASE_SLICE_NS 1000000;;
-        bore|hardened) scripts/config -e SCHED_BORE --set-val MIN_BASE_SLICE_NS 1000000;;
+        cachyos) scripts/config -e SCHED_CLASS_EXT -e SCHED_BORE;;
+        bore|hardened) scripts/config -e SCHED_BORE;;
         bmq) scripts/config -e SCHED_ALT -e SCHED_BMQ;;
         eevdf) ;;
         rt) scripts/config -e PREEMPT_COUNT -e PREEMPTION -d PREEMPT_VOLUNTARY -d PREEMPT -d PREEMPT_NONE -d PREEMPT_RT -d PREEMPT_DYNAMIC -e PREEMPT_BUILD -e PREEMPT_BUILD_AUTO -e PREEMPT_AUTO;;
-        rt-bore) scripts/config -e SCHED_BORE --set-val MIN_BASE_SLICE_NS 1000000 -e PREEMPT_COUNT -e PREEMPTION -d PREEMPT_VOLUNTARY -d PREEMPT -d PREEMPT_NONE -d PREEMPT_RT -d PREEMPT_DYNAMIC -e PREEMPT_BUILD -e PREEMPT_BUILD_AUTO -e PREEMPT_AUTO;;
+        rt-bore) scripts/config -e SCHED_BORE -e PREEMPT_COUNT -e PREEMPTION -d PREEMPT_VOLUNTARY -d PREEMPT -d PREEMPT_NONE -d PREEMPT_RT -d PREEMPT_DYNAMIC -e PREEMPT_BUILD -e PREEMPT_BUILD_AUTO -e PREEMPT_AUTO;;
         sched-ext) scripts/config -e SCHED_CLASS_EXT;;
         *) _die "The value $_cpusched is invalid. Choose the correct one again.";;
     esac
@@ -795,27 +795,27 @@ for _p in "${pkgname[@]}"; do
     }"
 done
 
-sha256sums=('60ae5ede1f2fce30ae7f8b6f372ad0b1a2d43bf65d6a276d762d078f8dd06beb'
-            '2a372373b4e1eaf55f2a2f104bfa91477ec9b263acf8f3aed08f4d8bdc78ee3d'
-            'ddee4faa970363aae1cadb1f58a473db6e62f4257f9899fc49c7d50b53074b15'
-            'a91249420d61edb17b8659ab3feca86d24cf3b1c941b14f232c47064fa4f4ce7'
-            '765893fcde155c1f22ad766c76689217676061e30cd6ffdc44968eae7d315630'
-            '65b5745c2e07d93495a5aa1ff7269c89e7aef42acff0d018ab05663560bdf8f7'
-            '5836757fbf73b810d6432b3bb3df7f1e2591c036b87cfc466fcd85e7822d9d2c'
-            '035091a17fe470b7b695ce15384b10e1703c5e57c95e2e53ff7c8360f834e0d9')
-sha512sums=('381f87e7797dda6f816d21ad8431ec4db235b58d1cd2db8be3673e5192a91b33bb99a015cf427e2ea1dfcb3f8bdbc52399a9daace15826c8d44623291d759743'
-            '026b8fe7a1eaacf832e9d0da08861869542248ef89daade3292d1e11b886788e2b1e4c8828b0509c454aedfdc7f22e9afbb446033072ebabf8c02fd5f5bf0d7f'
-            '2be47e2201ebdefe6ec4f3577425cd47518a63c0e41a03d4a71233a3374e6b87400e63d86614b18d30ff0abce0cd66f7d87eed3288802e6d3e5246677c750bc1'
-            '5c5ee5fd152deff16cf806de9dd8703b410732981047ba5a74c2dfd8c8fdea336a4b02695d65847a4be01aec5324ab730dc1b88a9f548ace495268bc7441cf97'
-            '85a19c3f731c96e532ec8277694388e499fcc2bca408f35f0ae2435e914fcc9032594445dc52c6c3f910127ae92c8dc2954f8c2afa2bd3d84938ca08026e61bc'
-            '503a3eb9814102c3852a990cbbd7ae76550eca8d97df9920344aa14a2b1b2a366ba8b540d21f68d610ab2969a44fe6476fb00a1b20beac75cfda5ef16a66ab42'
-            '713962b19e4b6d1105affb0fb249a2a6b2d07f3759e7a34a1dce7b9ccbc46621d1712a7af24d2c69249da7aa9d96916ee980b8f36bb265a771bf4fc1ff592dc0'
-            '9babb27abfe0a549611b082dce69493f38e8afc1bedb2833b0437fa0898e957bcb37039bc7b55acbb1f0be29a558e4b4ed6c14776c1e8566956dddfd6c43bdff')
 b2sums=('4011c4cce0375da66691e321911230ef54af99b6bb19a45bf7743b5388035d3d02835733b3fd1daea564f96275a38ce71f17504089428648d3dd8bf151a9bb3e'
-        'ac9927d74542a2d244b9d683920363ec2dbbe851ae0e069b278f1a0ba82c58b00f0f0312104b46f1b8c06585c2e6acb7eb1e63bd28499891f629c00f9a32f6b5'
-        'cd69b5c9fca0788936a96b4e64f4d56f6e70818591587062b5ef4ae98e401d15ffddb910cdc2a1c70516c183bb2b4f2be955d7b1e1fec9bb37e632064068abae'
+        '5720e8dd0bed0247dcfe0bdbce17e36e67bff56811611ae1b04f048b77b6e60c2a48303db73c5a0d4a56c7125cdd695116c4dfd965bd7cb28aa932f427bb3e7d'
+        '92e635bb3553896146bea23e5e414853723be9843c94750bc6d4bc327a76925bedb2b3b4481f2816a4691d684e417eae0279c1a2019cb37e9e852914696695da'
         'b1e964389424d43c398a76e7cee16a643ac027722b91fe59022afacb19956db5856b2808ca0dd484f6d0dfc170482982678d7a9a00779d98cd62d5105200a667'
-        'cdefbe6df1fbf6da4b38042e1304996be508ba303d4193bab63f40e94a37755ac7597cda4b25c142d46a88841352d01ced7959bbfc7225e1ae58246df9b174c7'
+        'cdb2c8d3184c4f0c9c9d50cf78db2e5e4a56eac0162b5d2400277e98c0432fecb96a25c50ef99aae328524bb546c3941e5fb3141e59d4943796574d73cd83182'
         'c7294a689f70b2a44b0c4e9f00c61dbd59dd7063ecbe18655c4e7f12e21ed7c5bb4f5169f5aa8623b1c59de7b2667facb024913ecb9f4c650dabce4e8a7e5452'
-        '3cb2a0ec8795b95b2e6db308ac332c9c8936a6d84c5097bd39d6639eb3cdd0584f8ca113e497701c5e8dccb84a0006345dad63441c8a35ff1d463b3856a3a610'
-        'd0fc3e57b7d5bd8d494a4a446fc15c49071bce15614f6c38ab567996f14799fbf05b7d79f43d5750c4b7d7cf5cefea94cde72577ea540da9c0535899c97726b3')
+        '019217482184364a3582b567649af9ce9af3f0dc6f6620ea6868ebe011c6e646573e167a574b98515997f829732601f13e8f62e76c8571f05d499d2c96da8976'
+        '13a8f31ba15a007b504f769019530d43b8cb1ec612598940f539ccea842f66ad0981d033a69ef5283c87e4e68abc92ea377e18d0ce930afe441683ebc1f2c99b')
+sha512sums=('381f87e7797dda6f816d21ad8431ec4db235b58d1cd2db8be3673e5192a91b33bb99a015cf427e2ea1dfcb3f8bdbc52399a9daace15826c8d44623291d759743'
+            '7c07edfa5dcbfd824fd45ab4523f1f6e3b15b4f3f1a424f14e060450b59d343db03af7a965707e6e6944ddc368f58655a10961d521592c4b4b9e97c9ee7c6732'
+            'eaf2a35fcf87e45bb247cd4536562b793acda3daa1921fc33d62d11b5fb9d951c67b05da093b96ddbeb219b26a9882965b4e5ee3d46c725aa7487ad33fba808d'
+            '5c5ee5fd152deff16cf806de9dd8703b410732981047ba5a74c2dfd8c8fdea336a4b02695d65847a4be01aec5324ab730dc1b88a9f548ace495268bc7441cf97'
+            'e9a3d165f09d13ca558e3fa44dc82e7bff9b8f7ff662dac0fcdc43db8bde16362ee1123ed551202e3005f71323c732f9bd14200e620f1bf5d797b81573f9786f'
+            '503a3eb9814102c3852a990cbbd7ae76550eca8d97df9920344aa14a2b1b2a366ba8b540d21f68d610ab2969a44fe6476fb00a1b20beac75cfda5ef16a66ab42'
+            '5822bdb8b7b57324ec098f0c614f4d1ae2830ce4dbbe5dc7e87d8ba05cbc5cb0209abf59b3e38624fb48e249bbb765be663abf95f01b88b8d4b09ebec219f693'
+            '2262eb64c080d098812d8460b98e5498489ccfba429eba472fd886711d8ed3781c37d7e4dd6e1846a07717f60a7399dd6fec9289cd1b2eebb051640aa090774d')
+sha256sums=('60ae5ede1f2fce30ae7f8b6f372ad0b1a2d43bf65d6a276d762d078f8dd06beb'
+            'ec9ef7a0b9cebb55940e1ef87a1f9e1004b10456a119dc386bb3e565b0d39c42'
+            'dad25c57e5cdd02b0ac685376788566fd82d1536ede9d7227a243742f4de05b2'
+            'a91249420d61edb17b8659ab3feca86d24cf3b1c941b14f232c47064fa4f4ce7'
+            'a5eaaf85fea513caf6378589d6562065ea00d4f48fcab04b9d4ebc63526bf154'
+            '65b5745c2e07d93495a5aa1ff7269c89e7aef42acff0d018ab05663560bdf8f7'
+            '228faec5ddd74a59f93ac1841b7a80ca6b49a2540314edb1cca459d6995b52d6'
+            '028fefb887e8d7d99466687f9aac5ffea3bcbe849a9633f54a6a4aea28e9a38a')
