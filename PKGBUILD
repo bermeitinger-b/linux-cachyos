@@ -109,14 +109,17 @@ _use_auto_optimization=${_use_auto_optimization-y}
 # "full: uses 1 thread for Linking, slow and uses more memory, theoretically with the highest performance gains."
 # "thin: uses multiple threads, faster and uses less memory, may have a lower runtime performance than Full."
 # "none: disable LTO
-_use_llvm_lto=${_use_llvm_lto-none}
+_use_llvm_lto=${_use_llvm_lto-thin}
 
 # Use suffix -lto only when requested by the user
-# Enabled by default.
 # y - enable -lto suffix
 # n - disable -lto suffix
 # https://github.com/CachyOS/linux-cachyos/issues/36
-_use_lto_suffix=${_use_lto_suffix-y}
+_use_lto_suffix=${_use_lto_suffix-}
+
+# Use suffix -gcc when requested by the user
+# Enabled by default to show the difference between LTO kernels and GCC kernels
+_use_gcc_suffix=${_use_gcc_suffix-y}
 
 # KCFI is a proposed forward-edge control-flow integrity scheme for
 # Clang, which is more suitable for kernel use than the existing CFI
@@ -139,20 +142,25 @@ _build_nvidia=${_build_nvidia-}
 # Use this only if you have Turing+ GPU
 _build_nvidia_open=${_build_nvidia_open-}
 
+_is_lto_kernel() {
+    [[ "$_use_llvm_lto" = "thin" || "$_use_llvm_lto" = "full" ]] || [ -n "$_use_kcfi" ]
+    return $?
+}
+
 # Build a debug package with non-stripped vmlinux
 _build_debug=${_build_debug-}
 
-_pkgsuffix="mycachyos"
-
 if [[ "$_use_llvm_lto" = "thin" || "$_use_llvm_lto" = "full" ]] && [ "$_use_lto_suffix" = "y"  ]; then
-    _pkgsuffix="${_pkgsuffix}-lto"
-    pkgbase="linux-$_pkgsuffix"
-
-elif [ -n "$_use_llvm_lto" ]  ||  [[ "$_use_lto_suffix" = "n" ]]; then
-    pkgbase="linux-$_pkgsuffix"
+    _pkgsuffix=mycachyos-lto
+elif [ "$_use_llvm_lto" = "none" ]  && [ -z "$_use_kcfi" ] && [ "$_use_gcc_suffix" = "y" ]; then
+    _pkgsuffix=mycachyos-gcc
+else
+    _pkgsuffix=mycachyos
 fi
+
+pkgbase="linux-$_pkgsuffix"
 _major=6.11
-_minor=2
+_minor=3
 #_minorc=$((_minor+1))
 #_rcver=rc8
 pkgver=${_major}.${_minor}
@@ -195,7 +203,7 @@ source=(
 )
 
 # LLVM makedepends
-if [[ "$_use_llvm_lto" = "thin" || "$_use_llvm_lto" = "full" ]] || [ -n "$_use_kcfi" ]; then
+if _is_lto_kernel; then
     makedepends+=(clang llvm lld)
     source+=("${_patchsource}/misc/dkms-clang.patch")
     BUILD_FLAGS=(
@@ -245,12 +253,10 @@ case "$_cpusched" in
     eevdf) ## 6.12 EEVDF patches
         source+=("${_patchsource}/sched/0001-eevdf-next.patch");;
     rt) ## EEVDF with RT patches
-        source+=("${_patchsource}/misc/0001-rt.patch"
-                 linux-cachyos-rt.install);;
+        source+=("${_patchsource}/misc/0001-rt.patch");;
     rt-bore) ## RT with BORE Scheduler
         source+=("${_patchsource}/misc/0001-rt.patch"
-                 "${_patchsource}/sched/0001-bore-cachy-rt.patch"
-                 linux-cachyos-rt.install);;
+                 "${_patchsource}/sched/0001-bore-cachy-rt.patch");;
     hardened) ## Hardened Patches with BORE Scheduler
         source+=("${_patchsource}/sched/0001-bore-cachy.patch"
                  "${_patchsource}/misc/0001-hardened.patch");;
@@ -617,6 +623,12 @@ _package() {
                 'uksmd: Userspace KSM helper daemon')
     provides=(VIRTUALBOX-GUEST-MODULES WIREGUARD-MODULE KSMBD-MODULE UKSMD-BUILTIN)
 
+    # Replace LTO kernel with the default kernel
+    if _is_lto_kernel; then
+        provides+=(linux-cachyos-lto=$_kernver)
+        replaces=(linux-cachyos-lto)
+    fi
+
     cd "$_srcname"
 
     local modulesdir="$pkgdir/usr/lib/modules/$(<version)"
@@ -640,6 +652,12 @@ _package() {
 _package-headers() {
     pkgdesc="Headers and scripts for building modules for the $pkgdesc kernel"
     depends=('pahole' "${pkgbase}")
+
+    # Replace LTO kernel with the default kernel
+    if _is_lto_kernel; then
+        provides+=(linux-cachyos-lto-headers=$_kernver)
+        replaces=(linux-cachyos-lto-headers)
+    fi
 
     cd "${_srcname}"
     local builddir="$pkgdir/usr/lib/modules/$(<version)/build"
@@ -726,6 +744,12 @@ _package-dbg(){
     pkgdesc="Non-stripped vmlinux file for the $pkgdesc kernel"
     depends=("${pkgbase}-headers")
 
+    # Replace LTO kernel with the default kernel
+    if _is_lto_kernel; then
+        provides+=(linux-cachyos-lto-dbg=$_kernver)
+        replaces=(linux-cachyos-lto-dbg)
+    fi
+
     cd "${_srcname}"
     mkdir -p "$pkgdir/usr/src/debug/${pkgbase}"
     install -Dt "$pkgdir/usr/src/debug/${pkgbase}" -m644 vmlinux
@@ -736,6 +760,12 @@ _package-zfs(){
     depends=('pahole' "${pkgbase}=${_kernver}")
     provides=('ZFS-MODULE')
     license=('CDDL')
+
+    # Replace LTO kernel with the default kernel
+    if _is_lto_kernel; then
+        provides+=(linux-cachyos-lto-zfs=$_kernver)
+        replaces=(linux-cachyos-lto-zfs)
+    fi
 
     cd "$_srcname"
     local modulesdir="$pkgdir/usr/lib/modules/$(<version)"
@@ -754,6 +784,12 @@ _package-nvidia(){
     conflicts=("$pkgbase-nvidia-open")
     license=('custom')
 
+    # Replace LTO kernel with the default kernel
+    if _is_lto_kernel; then
+        provides+=(linux-cachyos-lto-nvidia=$_kernver)
+        replaces=(linux-cachyos-lto-nvidia)
+    fi
+
     cd "$_srcname"
     local modulesdir="$pkgdir/usr/lib/modules/$(<version)"
 
@@ -770,6 +806,12 @@ _package-nvidia-open(){
     provides=('NVIDIA-MODULE')
     conflicts=("$pkgbase-nvidia")
     license=('MIT AND GPL-2.0-only')
+
+    # Replace LTO kernel with the default kernel
+    if _is_lto_kernel; then
+        provides+=(linux-cachyos-lto-nvidia-open=$_kernver)
+        replaces=(linux-cachyos-lto-nvidia-open)
+    fi
 
     cd "$_srcname"
     local modulesdir="$pkgdir/usr/lib/modules/$(<version)"
@@ -794,12 +836,11 @@ for _p in "${pkgname[@]}"; do
     _package${_p#$pkgbase}
     }"
 done
-
 b2sums=('4011c4cce0375da66691e321911230ef54af99b6bb19a45bf7743b5388035d3d02835733b3fd1daea564f96275a38ce71f17504089428648d3dd8bf151a9bb3e'
-        '5720e8dd0bed0247dcfe0bdbce17e36e67bff56811611ae1b04f048b77b6e60c2a48303db73c5a0d4a56c7125cdd695116c4dfd965bd7cb28aa932f427bb3e7d'
-        '92e635bb3553896146bea23e5e414853723be9843c94750bc6d4bc327a76925bedb2b3b4481f2816a4691d684e417eae0279c1a2019cb37e9e852914696695da'
+        '69582e4745850f3ec004d87859ac88994e3715ed38cd66aff2633fbcb6c20ca2e3be83417cd2c42c2757ab4e084e622c688799b5ad28e15c391adb2afab79a68'
+        '080302a1061cb4529bda58e1eecb782f0ee79aca547f03c991186dd4a647fc5fb772b32efcf5f895bca02104686a27f06b32eaf4745001e5bcb65b253349084f'
         'b1e964389424d43c398a76e7cee16a643ac027722b91fe59022afacb19956db5856b2808ca0dd484f6d0dfc170482982678d7a9a00779d98cd62d5105200a667'
-        'cdb2c8d3184c4f0c9c9d50cf78db2e5e4a56eac0162b5d2400277e98c0432fecb96a25c50ef99aae328524bb546c3941e5fb3141e59d4943796574d73cd83182'
+        'f85ac822b5def33cd8a530bb698d2773d0b3a7c03e242c5ab48add0a084a846c5cb372cd11d2f4008b4205a0641f00a6ac16da9c56adcbbe40f827ccfae71bcf'
         'c7294a689f70b2a44b0c4e9f00c61dbd59dd7063ecbe18655c4e7f12e21ed7c5bb4f5169f5aa8623b1c59de7b2667facb024913ecb9f4c650dabce4e8a7e5452'
-        '019217482184364a3582b567649af9ce9af3f0dc6f6620ea6868ebe011c6e646573e167a574b98515997f829732601f13e8f62e76c8571f05d499d2c96da8976'
-        '13a8f31ba15a007b504f769019530d43b8cb1ec612598940f539ccea842f66ad0981d033a69ef5283c87e4e68abc92ea377e18d0ce930afe441683ebc1f2c99b')
+        '175191b1d38af840c3d087e91c55ff38853ce855731f701e13fad5845beea1702cc4aff49b9331827c72ce1b8008910d35a7c2082c0a37a04323ed499429a28a'
+        'b640b367c11aa75ca9af88384198ec134d48a5d0974bb1c80282707745d7aee746e1f7f3a1d8c50d1b9567c66ec198056a875761737631c91d0d7a0a0169c197')
