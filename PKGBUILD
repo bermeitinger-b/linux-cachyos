@@ -142,11 +142,6 @@ _build_nvidia=${_build_nvidia-}
 # Use this only if you have Turing+ GPU
 _build_nvidia_open=${_build_nvidia_open-}
 
-_is_lto_kernel() {
-    [[ "$_use_llvm_lto" = "thin" || "$_use_llvm_lto" = "full" ]] || [ -n "$_use_kcfi" ]
-    return $?
-}
-
 # Build a debug package with non-stripped vmlinux
 _build_debug=${_build_debug-}
 
@@ -160,7 +155,7 @@ fi
 
 pkgbase="linux-$_pkgsuffix"
 _major=6.11
-_minor=3
+_minor=4
 #_minorc=$((_minor+1))
 #_rcver=rc8
 pkgver=${_major}.${_minor}
@@ -170,7 +165,7 @@ _stable=${_major}.${_minor}
 _srcname=linux-${_stable}
 #_srcname=linux-${_major}
 pkgdesc='Linux SCHED-EXT + BORE + Cachy Sauce Kernel by CachyOS with other patches and improvements'
-pkgrel=2
+pkgrel=3
 _kernver="$pkgver-$pkgrel"
 _kernuname="${pkgver}-${_pkgsuffix}"
 arch=('x86_64')
@@ -203,7 +198,7 @@ source=(
 )
 
 # LLVM makedepends
-if _is_lto_kernel; then
+if [[ "$_use_llvm_lto" = "thin" || "$_use_llvm_lto" = "full" ]] || [ -n "$_use_kcfi" ]; then
     makedepends+=(clang llvm lld)
     source+=("${_patchsource}/misc/dkms-clang.patch")
     BUILD_FLAGS=(
@@ -238,7 +233,9 @@ if [ -n "$_build_nvidia_open" ]; then
              "${_patchsource}/misc/nvidia/0002-Do-not-error-on-unkown-CPU-Type-and-add-Zen5-support.patch"
              "${_patchsource}/misc/nvidia/0003-Add-IBT-Support.patch"
              "${_patchsource}/misc/nvidia/0004-6.11-Add-fix-for-fbdev.patch"
-             "${_patchsource}/misc/nvidia/0005-6.12-drm_outpull_pill-changed-check.patch")
+             "${_patchsource}/misc/nvidia/0005-6.12-drm_outpull_pill-changed-check.patch"
+             "${_patchsource}/misc/nvidia/0008-silence-event-assert-until-570.patch"
+             "${_patchsource}/misc/nvidia/0009-fix-hdmi-names.patch")
 fi
 
 ## List of CachyOS schedulers
@@ -570,6 +567,10 @@ prepare() {
         patch -Np1 --no-backup-if-mismatch -i "${srcdir}/0004-6.11-Add-fix-for-fbdev.patch" -d "${srcdir}/${_nv_open_pkg}"
         # Fix for 6.12 Module Compilation
         patch -Np1 --no-backup-if-mismatch -i "${srcdir}/0005-6.12-drm_outpull_pill-changed-check.patch" -d "${srcdir}/${_nv_open_pkg}"
+        # Fix for CS2 dmesg spam
+        patch -Np1 --no-backup-if-mismatch -i "${srcdir}/0008-silence-event-assert-until-570.patch" -d "${srcdir}/${_nv_open_pkg}"
+        # Fix for HDMI names
+        patch -Np1 --no-backup-if-mismatch -i "${srcdir}/0009-fix-hdmi-names.patch" -d "${srcdir}/${_nv_open_pkg}"
     fi
 }
 
@@ -621,13 +622,7 @@ _package() {
                 'linux-firmware: firmware images needed for some devices'
                 'modprobed-db: Keeps track of EVERY kernel module that has ever been probed - useful for those of us who make localmodconfig'
                 'uksmd: Userspace KSM helper daemon')
-    provides=(VIRTUALBOX-GUEST-MODULES WIREGUARD-MODULE KSMBD-MODULE UKSMD-BUILTIN)
-
-    # Replace LTO kernel with the default kernel
-    if _is_lto_kernel; then
-        provides+=(linux-cachyos-lto=$_kernver)
-        replaces=(linux-cachyos-lto)
-    fi
+    provides=(VIRTUALBOX-GUEST-MODULES WIREGUARD-MODULE KSMBD-MODULE UKSMD-BUILTIN NTSYNC-MODULE)
 
     cd "$_srcname"
 
@@ -652,12 +647,6 @@ _package() {
 _package-headers() {
     pkgdesc="Headers and scripts for building modules for the $pkgdesc kernel"
     depends=('pahole' "${pkgbase}")
-
-    # Replace LTO kernel with the default kernel
-    if _is_lto_kernel; then
-        provides+=(linux-cachyos-lto-headers=$_kernver)
-        replaces=(linux-cachyos-lto-headers)
-    fi
 
     cd "${_srcname}"
     local builddir="$pkgdir/usr/lib/modules/$(<version)/build"
@@ -744,12 +733,6 @@ _package-dbg(){
     pkgdesc="Non-stripped vmlinux file for the $pkgdesc kernel"
     depends=("${pkgbase}-headers")
 
-    # Replace LTO kernel with the default kernel
-    if _is_lto_kernel; then
-        provides+=(linux-cachyos-lto-dbg=$_kernver)
-        replaces=(linux-cachyos-lto-dbg)
-    fi
-
     cd "${_srcname}"
     mkdir -p "$pkgdir/usr/src/debug/${pkgbase}"
     install -Dt "$pkgdir/usr/src/debug/${pkgbase}" -m644 vmlinux
@@ -760,12 +743,6 @@ _package-zfs(){
     depends=('pahole' "${pkgbase}=${_kernver}")
     provides=('ZFS-MODULE')
     license=('CDDL')
-
-    # Replace LTO kernel with the default kernel
-    if _is_lto_kernel; then
-        provides+=(linux-cachyos-lto-zfs=$_kernver)
-        replaces=(linux-cachyos-lto-zfs)
-    fi
 
     cd "$_srcname"
     local modulesdir="$pkgdir/usr/lib/modules/$(<version)"
@@ -784,12 +761,6 @@ _package-nvidia(){
     conflicts=("$pkgbase-nvidia-open")
     license=('custom')
 
-    # Replace LTO kernel with the default kernel
-    if _is_lto_kernel; then
-        provides+=(linux-cachyos-lto-nvidia=$_kernver)
-        replaces=(linux-cachyos-lto-nvidia)
-    fi
-
     cd "$_srcname"
     local modulesdir="$pkgdir/usr/lib/modules/$(<version)"
 
@@ -806,12 +777,6 @@ _package-nvidia-open(){
     provides=('NVIDIA-MODULE')
     conflicts=("$pkgbase-nvidia")
     license=('MIT AND GPL-2.0-only')
-
-    # Replace LTO kernel with the default kernel
-    if _is_lto_kernel; then
-        provides+=(linux-cachyos-lto-nvidia-open=$_kernver)
-        replaces=(linux-cachyos-lto-nvidia-open)
-    fi
 
     cd "$_srcname"
     local modulesdir="$pkgdir/usr/lib/modules/$(<version)"
@@ -837,10 +802,10 @@ for _p in "${pkgname[@]}"; do
     }"
 done
 b2sums=('4011c4cce0375da66691e321911230ef54af99b6bb19a45bf7743b5388035d3d02835733b3fd1daea564f96275a38ce71f17504089428648d3dd8bf151a9bb3e'
-        '69582e4745850f3ec004d87859ac88994e3715ed38cd66aff2633fbcb6c20ca2e3be83417cd2c42c2757ab4e084e622c688799b5ad28e15c391adb2afab79a68'
-        '080302a1061cb4529bda58e1eecb782f0ee79aca547f03c991186dd4a647fc5fb772b32efcf5f895bca02104686a27f06b32eaf4745001e5bcb65b253349084f'
+        '0c77f514e29881b27b8bf815a55845b65182a25be006815541c0e843c2bbc0d12ee978d2a418d779d296c361bbba2d78ff58a0c13ae78382552afadb1e43aaec'
+        '86742b3076b0a3b9ca586cb731f2cc2c5834dc3c12339a9ba22aa22c11b49ccb759935fb7483362bc40bbdfd6fd46ff71aac2270e526a0c3b46df2f3a6816ece'
         'b1e964389424d43c398a76e7cee16a643ac027722b91fe59022afacb19956db5856b2808ca0dd484f6d0dfc170482982678d7a9a00779d98cd62d5105200a667'
-        'f85ac822b5def33cd8a530bb698d2773d0b3a7c03e242c5ab48add0a084a846c5cb372cd11d2f4008b4205a0641f00a6ac16da9c56adcbbe40f827ccfae71bcf'
+        'd1e79a8b5cbc5f61fa8d623610d4f1e862b4bb889a4f23a063a42f9588538d33eb918eff00cc52f49228ecf790609e78a28abb60cd66241a6ac097c4f42f3480'
         'c7294a689f70b2a44b0c4e9f00c61dbd59dd7063ecbe18655c4e7f12e21ed7c5bb4f5169f5aa8623b1c59de7b2667facb024913ecb9f4c650dabce4e8a7e5452'
         '175191b1d38af840c3d087e91c55ff38853ce855731f701e13fad5845beea1702cc4aff49b9331827c72ce1b8008910d35a7c2082c0a37a04323ed499429a28a'
         'b640b367c11aa75ca9af88384198ec134d48a5d0974bb1c80282707745d7aee746e1f7f3a1d8c50d1b9567c66ec198056a875761737631c91d0d7a0a0169c197')
