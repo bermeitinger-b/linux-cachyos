@@ -146,11 +146,11 @@ _build_nvidia_open=${_build_nvidia_open-}
 _build_debug=${_build_debug-}
 
 if [[ "$_use_llvm_lto" = "thin" || "$_use_llvm_lto" = "full" ]] && [ "$_use_lto_suffix" = "y"  ]; then
-    _pkgsuffix=mycachyos-lto
+    _pkgsuffix=cachyos-lto
 elif [ "$_use_llvm_lto" = "none" ]  && [ -z "$_use_kcfi" ] && [ "$_use_gcc_suffix" = "y" ]; then
-    _pkgsuffix=mycachyos-gcc
+    _pkgsuffix=cachyos-gcc
 else
-    _pkgsuffix=mycachyos
+    _pkgsuffix=cachyos
 fi
 
 pkgbase="linux-$_pkgsuffix"
@@ -190,7 +190,6 @@ _nv_ver=560.35.03
 _nv_pkg="NVIDIA-Linux-x86_64-${_nv_ver}"
 _nv_open_pkg="open-gpu-kernel-modules-${_nv_ver}"
 source=(
-    "myconfig"
     "https://cdn.kernel.org/pub/linux/kernel/v${pkgver%%.*}.x/${_srcname}.tar.xz"
     "config"
     "auto-cpu-optimization.sh"
@@ -801,8 +800,7 @@ for _p in "${pkgname[@]}"; do
     _package${_p#$pkgbase}
     }"
 done
-b2sums=('4011c4cce0375da66691e321911230ef54af99b6bb19a45bf7743b5388035d3d02835733b3fd1daea564f96275a38ce71f17504089428648d3dd8bf151a9bb3e'
-        '0c77f514e29881b27b8bf815a55845b65182a25be006815541c0e843c2bbc0d12ee978d2a418d779d296c361bbba2d78ff58a0c13ae78382552afadb1e43aaec'
+b2sums=('0c77f514e29881b27b8bf815a55845b65182a25be006815541c0e843c2bbc0d12ee978d2a418d779d296c361bbba2d78ff58a0c13ae78382552afadb1e43aaec'
         '86742b3076b0a3b9ca586cb731f2cc2c5834dc3c12339a9ba22aa22c11b49ccb759935fb7483362bc40bbdfd6fd46ff71aac2270e526a0c3b46df2f3a6816ece'
         'b1e964389424d43c398a76e7cee16a643ac027722b91fe59022afacb19956db5856b2808ca0dd484f6d0dfc170482982678d7a9a00779d98cd62d5105200a667'
         'd1e79a8b5cbc5f61fa8d623610d4f1e862b4bb889a4f23a063a42f9588538d33eb918eff00cc52f49228ecf790609e78a28abb60cd66241a6ac097c4f42f3480'
