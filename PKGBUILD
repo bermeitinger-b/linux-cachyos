@@ -511,13 +511,8 @@ prepare() {
         fi
     fi
 
-    if [ -f "${srcdir}/myconfig" ]; then
-        echo "Applying custom config..."
-        "${srcdir}"/myconfig
-    else
-        echo "No custom config found..."
-        exit 1
-    fi
+    echo "Applying custom config..."
+    "${srcdir}"/myconfig
 
     ### Rewrite configuration
     echo "Rewrite configuration..."
