@@ -165,7 +165,7 @@ _stable=${_major}.${_minor}
 _srcname=linux-${_stable}
 #_srcname=linux-${_major}
 pkgdesc='Linux SCHED-EXT + BORE + Cachy Sauce Kernel by CachyOS with other patches and improvements'
-pkgrel=2
+pkgrel=1
 _kernver="$pkgver-$pkgrel"
 _kernuname="${pkgver}-${_pkgsuffix}"
 arch=('x86_64')
@@ -791,7 +791,7 @@ for _p in "${pkgname[@]}"; do
 done
 
 b2sums=('821eceaa7492122c724ea789a79aa99f61078f06c86fd6f76d08f640b47ea682f7441c47ed7b860ca39fd242b8797bb5bc311dc63dbb9c37bc15917eccafc255'
-        '86742b3076b0a3b9ca586cb731f2cc2c5834dc3c12339a9ba22aa22c11b49ccb759935fb7483362bc40bbdfd6fd46ff71aac2270e526a0c3b46df2f3a6816ece'
+        '16967354211884958ce1c69beb34998356cd29994e7fea2644f6969bf9f9b02b66c248f5859902ba284da6ecfc1d2d9c8298819b114b61f4f83902c5fa0cb81d'
         '4011c4cce0375da66691e321911230ef54af99b6bb19a45bf7743b5388035d3d02835733b3fd1daea564f96275a38ce71f17504089428648d3dd8bf151a9bb3e'
         'b1e964389424d43c398a76e7cee16a643ac027722b91fe59022afacb19956db5856b2808ca0dd484f6d0dfc170482982678d7a9a00779d98cd62d5105200a667'
         'e33413f3e23ec13fd55eb0e4d1a37b0d5e6bcd2d6e75453591aa9ad3823ab34b78f07f6d23cb03d6f04b4f13253a7d67a41131137262e91b8f3fdbe5a50dc84f'
