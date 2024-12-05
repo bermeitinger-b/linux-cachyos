@@ -181,7 +181,7 @@ _stable=${_major}-${_rcver}
 _srcname=linux-${_stable}
 #_srcname=linux-${_major}
 pkgdesc='Linux BORE + LTO + Cachy Sauce Kernel by CachyOS with other patches and improvements - Release Candidate'
-pkgrel=1
+pkgrel=2
 _kernver="$pkgver-$pkgrel"
 _kernuname="${pkgver}-${_pkgsuffix}"
 arch=('x86_64')
@@ -202,7 +202,7 @@ makedepends=(
 )
 
 _patchsource="https://raw.githubusercontent.com/cachyos/kernel-patches/master/${_major}"
-_nv_ver=565.57.01
+_nv_ver=565.77
 _nv_pkg="NVIDIA-Linux-x86_64-${_nv_ver}"
 _nv_open_pkg="open-gpu-kernel-modules-${_nv_ver}"
 source=(
@@ -237,8 +237,7 @@ fi
 # NVIDIA pre-build module support
 if [ -n "$_build_nvidia" ]; then
     source+=("https://us.download.nvidia.com/XFree86/Linux-x86_64/${_nv_ver}/${_nv_pkg}.run"
-             "${_patchsource}/misc/nvidia/0001-Make-modeset-and-fbdev-default-enabled.patch"
-             "${_patchsource}/misc/nvidia/0006-nvidia-drm-Set-FOP_UNSIGNED_OFFSET-for-nv_drm_fops.f.patch")
+             "${_patchsource}/misc/nvidia/0001-Make-modeset-and-fbdev-default-enabled.patch")
 fi
 
 if [ -n "$_build_nvidia_open" ]; then
@@ -248,7 +247,6 @@ if [ -n "$_build_nvidia_open" ]; then
              "${_patchsource}/misc/nvidia/0003-Add-IBT-Support.patch"
              "${_patchsource}/misc/nvidia/0004-silence-event-assert-until-570.patch"
              "${_patchsource}/misc/nvidia/0005-nvkms-Sanitize-trim-ELD-product-name-strings.patch"
-             "${_patchsource}/misc/nvidia/0006-nvidia-drm-Set-FOP_UNSIGNED_OFFSET-for-nv_drm_fops.f.patch"
              "${_patchsource}/misc/nvidia/0007-6.13-Fix-for-modules-symlinking.patch"
              "${_patchsource}/misc/nvidia/0008-crypto-Add-fix-for-6.13-Module-compilation.patch")
 fi
@@ -550,8 +548,6 @@ prepare() {
 
         # Use fbdev and modeset as default
         patch -Np1 -i "${srcdir}/0001-Make-modeset-and-fbdev-default-enabled.patch" -d "${srcdir}/${_nv_pkg}/kernel"
-        # Fix for 6.12
-        patch -Np2 -i "${srcdir}/0006-nvidia-drm-Set-FOP_UNSIGNED_OFFSET-for-nv_drm_fops.f.patch" -d "${srcdir}/${_nv_pkg}/kernel"
     fi
 
     if [ -n "$_build_nvidia_open" ]; then
@@ -564,8 +560,6 @@ prepare() {
         patch -Np1 --no-backup-if-mismatch -i "${srcdir}/0004-silence-event-assert-until-570.patch" -d "${srcdir}/${_nv_open_pkg}"
         # Fix for HDMI names
         patch -Np1 --no-backup-if-mismatch -i "${srcdir}/0005-nvkms-Sanitize-trim-ELD-product-name-strings.patch" -d "${srcdir}/${_nv_open_pkg}"
-        # Add fix for 6.12 Display Open issue
-        patch -Np1 --no-backup-if-mismatch -i "${srcdir}/0006-nvidia-drm-Set-FOP_UNSIGNED_OFFSET-for-nv_drm_fops.f.patch" -d "${srcdir}/${_nv_open_pkg}"
         # Add fix for 6.13 Module Compilation
         patch -Np1 --no-backup-if-mismatch -i "${srcdir}/0007-6.13-Fix-for-modules-symlinking.patch" -d "${srcdir}/${_nv_open_pkg}"
         patch -Np1 --no-backup-if-mismatch -i "${srcdir}/0008-crypto-Add-fix-for-6.13-Module-compilation.patch" -d "${srcdir}/${_nv_open_pkg}"
@@ -805,4 +799,4 @@ b2sums=('0e17a46b6de4138a252643beaaf6fc8e4e2ce6b8f3cc7becbba6b90fc7336959b0a4f5f
         'b1e964389424d43c398a76e7cee16a643ac027722b91fe59022afacb19956db5856b2808ca0dd484f6d0dfc170482982678d7a9a00779d98cd62d5105200a667'
         '42ad9bbddc7c395650254bb75232750f7ec145ba7bd4eff8f56b188706c61d498c4d326a8d96d9abee1fd3f7344a2a29c0afa55fb7fd70a4525769924a6af0c0'
         'c7294a689f70b2a44b0c4e9f00c61dbd59dd7063ecbe18655c4e7f12e21ed7c5bb4f5169f5aa8623b1c59de7b2667facb024913ecb9f4c650dabce4e8a7e5452'
-        '995d5bf654878d18eebc5b26eadd1747643bac8c58c0caa5771d866933e218770e0a6458e2ee94ec3255923e8cf2a05a301cef9cfcd2904392dca78c8c385b15')
+        '6f450dacc90b0479a96e7c817bb0403302cdb3a79f7909a96b8ccb1231393c3df43e7abcad24b168bfded74c259612a5f2b81dd36ce4f78ea1441476e60ed01c')
