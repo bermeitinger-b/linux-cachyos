@@ -29,6 +29,7 @@ pkgbase = linux-cachyos
 	source = myconfig
 	source = https://raw.githubusercontent.com/cachyos/kernel-patches/master/6.17/all/0001-cachyos-base-all.patch
 	source = 9999-drm-dp-Disable-DPCD-probing.patch
+	source = 9999-Fix-adios.patch
 	source = https://raw.githubusercontent.com/cachyos/kernel-patches/master/6.17/misc/dkms-clang.patch
 	source = https://raw.githubusercontent.com/cachyos/kernel-patches/master/6.17/sched/0001-bore-cachy.patch
 	b2sums = 0f6fb62796d5120685c2f1420d03b38332e1c25dae6c52b9b1b07ebf621907626cc9312098341a0b2a9af9a220bf0afbf6c8d23c9f335a93293ba6940c412912
@@ -36,6 +37,7 @@ pkgbase = linux-cachyos
 	b2sums = 4011c4cce0375da66691e321911230ef54af99b6bb19a45bf7743b5388035d3d02835733b3fd1daea564f96275a38ce71f17504089428648d3dd8bf151a9bb3e
 	b2sums = b027a5a5186c7cb186e831b03952defae538d9aca60611ac2e9066f84a05515c9160572783a31eb10a2586f60a9bf842556fcf1128435f75f2ae3eca91aa002f
 	b2sums = ae395f2a8c09782eda3875e95affcd7be213e30fb7b77f79ae25b30cd0a37ab2dbf2dabf4cb3c1fe3bf6e84011e5f5f8e203eecdb43f27f4aa178671764cb927
+	b2sums = 25c41f0418dcd36515d32fc6cfa0ead53b6639520e0ae6802dea042b8e07ae74b2a076636da4c0dab46268440089e6eb4367be37af8ee058fa24e15e75d98bb8
 	b2sums = c7294a689f70b2a44b0c4e9f00c61dbd59dd7063ecbe18655c4e7f12e21ed7c5bb4f5169f5aa8623b1c59de7b2667facb024913ecb9f4c650dabce4e8a7e5452
 	b2sums = c37d88a8853d92d342acc76c641ef2979eb002ac68936425d7c9fceb45fab70cbf9e15eecb949a0af1e4b895736458d20bca4c525ffdcedbbb736dfaceaad91d
 
