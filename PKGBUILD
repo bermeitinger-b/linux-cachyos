@@ -150,25 +150,28 @@
 # Enable this after the profiles have been generated
 : "${_propeller_profiles:=no}"
 
+# Set number of cores to use for compilation
+: "${n_cpus:=$(nproc)}"
+
 # ATTENTION: Do not modify after this line
 _is_lto_kernel() {
     [[ "$_use_llvm_lto" = "thin" || "$_use_llvm_lto" = "full"  || "$_use_llvm_lto" = "thin-dist" ]]
     return $?
 }
 
-if _is_lto_kernel && [ "$_use_lto_suffix" = "yes"  ]; then
-    _pkgsuffix=cachyos-lto
+if _is_lto_kernel && [ "$_use_lto_suffix" = "yes" ]; then
+    _pkgsuffix="cachyos-rc-lto"
 elif ! _is_lto_kernel && [ "$_use_gcc_suffix" = "yes" ]; then
-    _pkgsuffix=cachyos-gcc
+    _pkgsuffix="cachyos-rc-gcc"
 else
-    _pkgsuffix=cachyos
+    _pkgsuffix="cachyos-rc"
 fi
 
 pkgbase="linux-$_pkgsuffix"
 _major=6.17
 _minor=0
 #_minorc=$((_minor+1))
-_rcver=rc3
+_rcver=rc4
 pkgver=${_major}.${_rcver}
 #_stable=${_major}.${_minor}
 #_stable=${_major}
@@ -209,7 +212,6 @@ source=(
     "myconfig"
     "${_patchsource}/all/0001-cachyos-base-all.patch"
     "9999-drm-dp-Disable-DPCD-probing.patch"
-    "9999-Fix-adios.patch"
 )
 
 # LLVM makedepends
@@ -232,7 +234,7 @@ fi
 # ZFS support
 if [ "$_build_zfs" = "yes" ]; then
     makedepends+=(git)
-    source+=("git+https://github.com/cachyos/zfs.git#commit=725d591cf34aca2a4b1f19f2a733def2c8c8dc41")
+    source+=("git+https://github.com/cachyos/zfs.git#commit=3b64a9619f8f724ecac3e280a235f6b56d20ee1c")
 fi
 
 # NVIDIA pre-build module support
@@ -504,7 +506,7 @@ prepare() {
 
     ### Rewrite configuration
     echo "Rewrite configuration..."
-    make "${BUILD_FLAGS[@]}" prepare
+    yes "" | make "${BUILD_FLAGS[@]}" prepare
     yes "" | make "${BUILD_FLAGS[@]}" config >/dev/null
     diff -u ../config .config || :
 
@@ -554,7 +556,7 @@ _sign_modules() {
 
 build() {
     cd "$_srcname"
-    make "${BUILD_FLAGS[@]}" -j"$(nproc)" all
+    make "${BUILD_FLAGS[@]}" -j"$n_cpus" all
     make -C tools/bpf/bpftool vmlinux.h feature-clang-bpf-co-re=1
 
     local MODULE_FLAGS=(
@@ -566,13 +568,13 @@ build() {
     if [ "$_build_nvidia" = "yes" ]; then
         MODULE_FLAGS+=(NV_EXCLUDE_BUILD_MODULES='__EXCLUDE_MODULES')
         cd "${srcdir}/${_nv_pkg}/kernel"
-        make "${BUILD_FLAGS[@]}" "${MODULE_FLAGS[@]}" -j"$(nproc)" modules
+        make "${BUILD_FLAGS[@]}" "${MODULE_FLAGS[@]}" -j"$n_cpus" modules
     fi
 
     if [ "$_build_nvidia_open" = "yes" ]; then
         cd "${srcdir}/${_nv_open_pkg}"
         MODULE_FLAGS+=(IGNORE_CC_MISMATCH=yes)
-        CFLAGS= CXXFLAGS= LDFLAGS= make "${BUILD_FLAGS[@]}" "${MODULE_FLAGS[@]}" -j"$(nproc)" modules
+        CFLAGS= CXXFLAGS= LDFLAGS= make "${BUILD_FLAGS[@]}" "${MODULE_FLAGS[@]}" -j"$n_cpus" modules
     fi
 
     if [ "$_build_zfs" = "yes" ]; then
@@ -802,11 +804,10 @@ for _p in "${pkgname[@]}"; do
     }"
 done
 
-b2sums=('0f6fb62796d5120685c2f1420d03b38332e1c25dae6c52b9b1b07ebf621907626cc9312098341a0b2a9af9a220bf0afbf6c8d23c9f335a93293ba6940c412912'
-        'd337d07f1bb4f144f1ce18d8a349c482fc241e301d73ed53dda0beb2495789161ba664cce54ac013bf41c1779b4fee0220d4605ceb23f282766414789bce5b86'
+b2sums=('cc1c4c4a4411263b4d2c6d312bc4ce6987b4447b7981b8f748efbd8f6a17cdde9a5a2ef1f96bd2a60ca8265dfafb68baa1574543fa9d637fa714d50f1dbce803'
+        '7cc981f7248d693d5c0a6af3f8712af89848c5a446820cd0a72703d7b7461b5cd313f9bdf84037124e2f0b3209d44c4308b5474d97152e6c99128e1b0c4f3e95'
         '4011c4cce0375da66691e321911230ef54af99b6bb19a45bf7743b5388035d3d02835733b3fd1daea564f96275a38ce71f17504089428648d3dd8bf151a9bb3e'
-        'b027a5a5186c7cb186e831b03952defae538d9aca60611ac2e9066f84a05515c9160572783a31eb10a2586f60a9bf842556fcf1128435f75f2ae3eca91aa002f'
+        'eb15e025e803dc7816fe5f3467b2380db3c0e942cff97d6a548cc81fe24c25305e47287542d6d71ca324392ee0969000f622d29b2b967209775d61ce9cbc3eca'
         'ae395f2a8c09782eda3875e95affcd7be213e30fb7b77f79ae25b30cd0a37ab2dbf2dabf4cb3c1fe3bf6e84011e5f5f8e203eecdb43f27f4aa178671764cb927'
-        '25c41f0418dcd36515d32fc6cfa0ead53b6639520e0ae6802dea042b8e07ae74b2a076636da4c0dab46268440089e6eb4367be37af8ee058fa24e15e75d98bb8'
         'c7294a689f70b2a44b0c4e9f00c61dbd59dd7063ecbe18655c4e7f12e21ed7c5bb4f5169f5aa8623b1c59de7b2667facb024913ecb9f4c650dabce4e8a7e5452'
         'c37d88a8853d92d342acc76c641ef2979eb002ac68936425d7c9fceb45fab70cbf9e15eecb949a0af1e4b895736458d20bca4c525ffdcedbbb736dfaceaad91d')
