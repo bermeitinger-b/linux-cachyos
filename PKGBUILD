@@ -90,15 +90,14 @@
 : "${_use_llvm_lto:=thin}"
 
 # Use suffix -lto only when requested by the user
-# Enabled by default.
 # yes - enable -lto suffix
 # no - disable -lto suffix
 # https://github.com/CachyOS/linux-cachyos/issues/36
 : "${_use_lto_suffix:=no}"
 
 # Use suffix -gcc when requested by the user
-# This was added to facilitate https://github.com/CachyOS/linux-cachyos/issues/286
-: "${_use_gcc_suffix:=no}"
+# Enabled by default to show the difference between LTO kernels and GCC kernels
+: "${_use_gcc_suffix:=yes}"
 
 # KCFI is a proposed forward-edge control-flow integrity scheme for
 # Clang, which is more suitable for kernel use than the existing CFI
@@ -179,7 +178,7 @@ _stable=${_major}-${_rcver}
 _srcname=linux-${_stable}
 #_srcname=linux-${_major}
 pkgdesc='Linux BORE + LTO + AutoFDO + Propeller + Cachy Sauce Kernel by CachyOS with other patches and improvements - Release Candidate'
-pkgrel=1
+pkgrel=2
 _kernver="$pkgver-$pkgrel"
 _kernuname="${pkgver}-${_pkgsuffix}"
 arch=('x86_64')
@@ -203,7 +202,7 @@ makedepends=(
 )
 
 _patchsource="https://raw.githubusercontent.com/cachyos/kernel-patches/master/${_major}"
-_nv_ver=580.76.05
+_nv_ver=580.82.07
 _nv_pkg="NVIDIA-Linux-x86_64-${_nv_ver}"
 _nv_open_pkg="NVIDIA-kernel-module-source-${_nv_ver}"
 source=(
@@ -602,6 +601,11 @@ _package() {
                 'modprobed-db: Keeps track of EVERY kernel module that has ever been probed - useful for those of us who make localmodconfig'
                 'scx-scheds: to use sched-ext schedulers')
     provides=(VIRTUALBOX-GUEST-MODULES WIREGUARD-MODULE KSMBD-MODULE V4L2LOOPBACK-MODULE NTSYNC-MODULE VHBA-MODULE ADIOS-MODULE)
+    # Replace LTO kernel with the default kernel
+    if _is_lto_kernel; then
+        provides+=(linux-cachyos-lto=$_kernver)
+        replaces=(linux-cachyos-lto)
+    fi
 
     cd "$_srcname"
 
@@ -628,6 +632,8 @@ _package-headers() {
     depends=('pahole' "${pkgbase}")
 
     if _is_lto_kernel; then
+        provides+=(linux-cachyos-lto-headers=$_kernver)
+        replaces=(linux-cachyos-lto-headers)
         depends+=(clang llvm lld)
     fi
 
@@ -805,7 +811,7 @@ for _p in "${pkgname[@]}"; do
 done
 
 b2sums=('cc1c4c4a4411263b4d2c6d312bc4ce6987b4447b7981b8f748efbd8f6a17cdde9a5a2ef1f96bd2a60ca8265dfafb68baa1574543fa9d637fa714d50f1dbce803'
-        '7cc981f7248d693d5c0a6af3f8712af89848c5a446820cd0a72703d7b7461b5cd313f9bdf84037124e2f0b3209d44c4308b5474d97152e6c99128e1b0c4f3e95'
+        '60c923e85e0b768c69de6c1d764546c66c54e092244f936ab648c43f5d5454dd0c9a4e662b9ceaf6e9f82f5b648686aaeaba4e328ed57abda33a349ab1febb90'
         '4011c4cce0375da66691e321911230ef54af99b6bb19a45bf7743b5388035d3d02835733b3fd1daea564f96275a38ce71f17504089428648d3dd8bf151a9bb3e'
         'eb15e025e803dc7816fe5f3467b2380db3c0e942cff97d6a548cc81fe24c25305e47287542d6d71ca324392ee0969000f622d29b2b967209775d61ce9cbc3eca'
         'ae395f2a8c09782eda3875e95affcd7be213e30fb7b77f79ae25b30cd0a37ab2dbf2dabf4cb3c1fe3bf6e84011e5f5f8e203eecdb43f27f4aa178671764cb927'

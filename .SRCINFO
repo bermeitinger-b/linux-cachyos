@@ -1,7 +1,7 @@
 pkgbase = linux-cachyos-rc
 	pkgdesc = Linux BORE + LTO + AutoFDO + Propeller + Cachy Sauce Kernel by CachyOS with other patches and improvements - Release Candidate
 	pkgver = 6.17.rc4
-	pkgrel = 1
+	pkgrel = 2
 	url = https://github.com/CachyOS/linux-cachyos
 	arch = x86_64
 	license = GPL-2.0-only
@@ -32,7 +32,7 @@ pkgbase = linux-cachyos-rc
 	source = https://raw.githubusercontent.com/cachyos/kernel-patches/master/6.17/misc/dkms-clang.patch
 	source = https://raw.githubusercontent.com/cachyos/kernel-patches/master/6.17/sched/0001-bore-cachy.patch
 	b2sums = cc1c4c4a4411263b4d2c6d312bc4ce6987b4447b7981b8f748efbd8f6a17cdde9a5a2ef1f96bd2a60ca8265dfafb68baa1574543fa9d637fa714d50f1dbce803
-	b2sums = 7cc981f7248d693d5c0a6af3f8712af89848c5a446820cd0a72703d7b7461b5cd313f9bdf84037124e2f0b3209d44c4308b5474d97152e6c99128e1b0c4f3e95
+	b2sums = 60c923e85e0b768c69de6c1d764546c66c54e092244f936ab648c43f5d5454dd0c9a4e662b9ceaf6e9f82f5b648686aaeaba4e328ed57abda33a349ab1febb90
 	b2sums = 4011c4cce0375da66691e321911230ef54af99b6bb19a45bf7743b5388035d3d02835733b3fd1daea564f96275a38ce71f17504089428648d3dd8bf151a9bb3e
 	b2sums = eb15e025e803dc7816fe5f3467b2380db3c0e942cff97d6a548cc81fe24c25305e47287542d6d71ca324392ee0969000f622d29b2b967209775d61ce9cbc3eca
 	b2sums = ae395f2a8c09782eda3875e95affcd7be213e30fb7b77f79ae25b30cd0a37ab2dbf2dabf4cb3c1fe3bf6e84011e5f5f8e203eecdb43f27f4aa178671764cb927
@@ -55,6 +55,8 @@ pkgname = linux-cachyos-rc
 	provides = NTSYNC-MODULE
 	provides = VHBA-MODULE
 	provides = ADIOS-MODULE
+	provides = linux-cachyos-lto=6.17.rc4-2
+	replaces = linux-cachyos-lto
 
 pkgname = linux-cachyos-rc-headers
 	pkgdesc = Headers and scripts for building modules for the Linux BORE + LTO + AutoFDO + Propeller + Cachy Sauce Kernel by CachyOS with other patches and improvements - Release Candidate kernel
@@ -63,3 +65,5 @@ pkgname = linux-cachyos-rc-headers
 	depends = clang
 	depends = llvm
 	depends = lld
+	provides = linux-cachyos-lto-headers=6.17.rc4-2
+	replaces = linux-cachyos-lto-headers
