@@ -209,7 +209,7 @@ source=(
     "https://github.com/torvalds/linux/archive/refs/tags/v${_major}-${_rcver}.tar.gz"
     "config"
     "myconfig"
-    "./0004-drm-amd-display-Disable-DPCD-Probe-Quirk.patch"
+    "0004-drm-amd-display-Disable-DPCD-Probe-Quirk.patch"
     "${_patchsource}/all/0001-cachyos-base-all.patch"
 )
 
