@@ -1,0 +1,27 @@
+From 7bf80fab96e289205e538808545877199046e35a Mon Sep 17 00:00:00 2001
+From: Fangzhi Zuo <Jerry.Zuo@amd.com>
+Date: Wed, 3 Sep 2025 10:38:04 -0400
+Subject: [PATCH] drm/amd/display: Disable DPCD Probe Quirk
+
+Disable dpcd probe quirk to native aux.
+
+Signed-off-by: Fangzhi Zuo <Jerry.Zuo@amd.com>
+---
+ drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm_mst_types.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm_mst_types.c b/drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm_mst_types.c
+index 25e8befbcc47..99fd064324ba 100644
+--- a/drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm_mst_types.c
++++ b/drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm_mst_types.c
+@@ -809,6 +809,7 @@ void amdgpu_dm_initialize_dp_connector(struct amdgpu_display_manager *dm,
+ 	drm_dp_aux_init(&aconnector->dm_dp_aux.aux);
+ 	drm_dp_cec_register_connector(&aconnector->dm_dp_aux.aux,
+ 				      &aconnector->base);
++	drm_dp_dpcd_set_probe(&aconnector->dm_dp_aux.aux, false);
+ 
+ 	if (aconnector->base.connector_type == DRM_MODE_CONNECTOR_eDP)
+ 		return;
+-- 
+2.43.0
+
