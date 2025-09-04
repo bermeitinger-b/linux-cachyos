@@ -159,25 +159,25 @@ _is_lto_kernel() {
 }
 
 if _is_lto_kernel && [ "$_use_lto_suffix" = "yes" ]; then
-    _pkgsuffix="cachyos-rc-lto"
+    _pkgsuffix=cachyos-lto
 elif ! _is_lto_kernel && [ "$_use_gcc_suffix" = "yes" ]; then
-    _pkgsuffix="cachyos-rc-gcc"
+    _pkgsuffix=cachyos-gcc
 else
-    _pkgsuffix="cachyos-rc"
+    _pkgsuffix=cachyos
 fi
 
 pkgbase="linux-$_pkgsuffix"
-_major=6.17
-_minor=0
+_major=6.16
+_minor=4
 #_minorc=$((_minor+1))
-_rcver=rc4
-pkgver=${_major}.${_rcver}
-#_stable=${_major}.${_minor}
+#_rcver=rc8
+pkgver=${_major}.${_minor}
+_stable=${_major}.${_minor}
 #_stable=${_major}
-_stable=${_major}-${_rcver}
+#_stablerc=${_major}-${_rcver}
 _srcname=linux-${_stable}
 #_srcname=linux-${_major}
-pkgdesc='Linux BORE + LTO + AutoFDO + Propeller + Cachy Sauce Kernel by CachyOS with other patches and improvements - Release Candidate'
+pkgdesc='Linux BORE + LTO + AutoFDO + Propeller + Cachy Sauce Kernel by CachyOS with other patches and improvements'
 pkgrel=3
 _kernver="$pkgver-$pkgrel"
 _kernuname="${pkgver}-${_pkgsuffix}"
@@ -206,12 +206,15 @@ _nv_ver=580.82.07
 _nv_pkg="NVIDIA-Linux-x86_64-${_nv_ver}"
 _nv_open_pkg="NVIDIA-kernel-module-source-${_nv_ver}"
 source=(
-    "https://github.com/torvalds/linux/archive/refs/tags/v${_major}-${_rcver}.tar.gz"
+    "https://cdn.kernel.org/pub/linux/kernel/v${pkgver%%.*}.x/${_srcname}.tar.xz"
     "config"
     "myconfig"
+    "0000-Revert-drm-dp-Change-AUX-DPCD-probe-address-from-DPC.patch"
+    "0001-drm-edid-Define-the-quirks-in-an-enum-list.patch"
+    "0002-drm-edid-Add-support-for-quirks-visible-to-DRM-core-.patch"
+    "0003-drm-dp-Add-an-EDID-quirk-for-the-DPCD-register-acces.patch"
     "0004-drm-amd-display-Disable-DPCD-Probe-Quirk.patch"
-    "${_patchsource}/all/0001-cachyos-base-all.patch"
-)
+    "${_patchsource}/all/0001-cachyos-base-all.patch")
 
 # LLVM makedepends
 if _is_lto_kernel; then
@@ -233,7 +236,7 @@ fi
 # ZFS support
 if [ "$_build_zfs" = "yes" ]; then
     makedepends+=(git)
-    source+=("git+https://github.com/cachyos/zfs.git#commit=3b64a9619f8f724ecac3e280a235f6b56d20ee1c")
+    source+=("git+https://github.com/cachyos/zfs.git#commit=34f96a15c73eab27dd6ad17bb5f1263bf26e37d7")
 fi
 
 # NVIDIA pre-build module support
@@ -245,8 +248,7 @@ fi
 if [ "$_build_nvidia_open" = "yes" ]; then
     source+=("https://download.nvidia.com/XFree86/${_nv_open_pkg%"-$_nv_ver"}/${_nv_open_pkg}.tar.xz"
              "${_patchsource}/misc/nvidia/0001-Enable-atomic-kernel-modesetting-by-default.patch"
-             "${_patchsource}/misc/nvidia/0002-Add-IBT-support.patch"
-             "${_patchsource}/misc/nvidia/6.17.patch")
+             "${_patchsource}/misc/nvidia/0002-Add-IBT-support.patch")
 fi
 
 # Use generated AutoFDO Profile
@@ -535,7 +537,6 @@ prepare() {
     if [ "$_build_nvidia_open" = "yes" ]; then
         patch -Np1 -i "${srcdir}/0001-Enable-atomic-kernel-modesetting-by-default.patch" -d "${srcdir}/${_nv_open_pkg}/kernel-open"
         patch -Np1 -i "${srcdir}/0002-Add-IBT-support.patch" -d "${srcdir}/${_nv_open_pkg}/"
-        patch -Np1 -i "${srcdir}/6.17.patch" -d "${srcdir}/${_nv_open_pkg}/"
     fi
 }
 
@@ -810,10 +811,8 @@ for _p in "${pkgname[@]}"; do
     }"
 done
 
-b2sums=('cc1c4c4a4411263b4d2c6d312bc4ce6987b4447b7981b8f748efbd8f6a17cdde9a5a2ef1f96bd2a60ca8265dfafb68baa1574543fa9d637fa714d50f1dbce803'
-        '60c923e85e0b768c69de6c1d764546c66c54e092244f936ab648c43f5d5454dd0c9a4e662b9ceaf6e9f82f5b648686aaeaba4e328ed57abda33a349ab1febb90'
-        '4011c4cce0375da66691e321911230ef54af99b6bb19a45bf7743b5388035d3d02835733b3fd1daea564f96275a38ce71f17504089428648d3dd8bf151a9bb3e'
-        '4e60f422eca8972175e1a00c927284243f8d0c39d4e8346e7505f1d087ce96d08be95b8dbb2b735c9b895137fd46dc49527bbfd305502079279c34628ba7c212'
-        'eb15e025e803dc7816fe5f3467b2380db3c0e942cff97d6a548cc81fe24c25305e47287542d6d71ca324392ee0969000f622d29b2b967209775d61ce9cbc3eca'
+b2sums=('251feef2f995c155850eac2fce5b89f37f39e9f13b6a4e6873370fdc69654692c6bf6c92f04ca7c0b5fd6088d74442afb68db71d2cc18691e23c61b0be714f34'
+        'ca08c1ad172af846ccf78e3694713a68191fec6e59fba5e0a6c90ba228fac5eab77fb8603f35190586d77f6acbf6f87fdb3a1c835d2d68e635c5e1e4d7e7ebe8'
+        '10333c7ee4e2a30fc109d138e4d9b09ae49cd0396e0e72a5379ba7ab344dfddf4f26b00788a497c67b151ca3cfd56ef50c4cf99c9928214ca9215a2a1f6025e7'
         'c7294a689f70b2a44b0c4e9f00c61dbd59dd7063ecbe18655c4e7f12e21ed7c5bb4f5169f5aa8623b1c59de7b2667facb024913ecb9f4c650dabce4e8a7e5452'
-        'c37d88a8853d92d342acc76c641ef2979eb002ac68936425d7c9fceb45fab70cbf9e15eecb949a0af1e4b895736458d20bca4c525ffdcedbbb736dfaceaad91d')
+        'c7f5b2e6c1f95ec961666c338057501a41f3e8de584f0985021b4c5c0ce5ddf738b56f2c50fe33d879a9cddd2236c26fb995c03445cab93580379d2e2c4669cc')
