@@ -1,0 +1,48 @@
+From 2a01320af7423f5669956c39de1d6fd8ccd2757d Mon Sep 17 00:00:00 2001
+From: Fangzhi Zuo <Jerry.Zuo@amd.com>
+Date: Wed, 3 Sep 2025 10:38:04 -0400
+Subject: [PATCH] drm/amd/display: Disable DPCD Probe Quirk
+
+Disable dpcd probe quirk to the aux that is not affected.
+
+Signed-off-by: Fangzhi Zuo <Jerry.Zuo@amd.com>
+---
+ .../gpu/drm/amd/display/amdgpu_dm/amdgpu_dm_mst_types.c   | 8 ++++++++
+ 1 file changed, 8 insertions(+)
+
+diff --git a/drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm_mst_types.c b/drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm_mst_types.c
+index 25e8befbcc47..1e87a166065a 100644
+--- a/drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm_mst_types.c
++++ b/drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm_mst_types.c
+@@ -293,6 +293,11 @@ static bool validate_dsc_caps_on_connector(struct amdgpu_dm_connector *aconnecto
+ 
+ 	if (!aconnector->dsc_aux)
+ 		return false;
++	else
++		drm_dp_dpcd_set_probe(aconnector->dsc_aux, false);
++
++	if (port->passthrough_aux)
++		drm_dp_dpcd_set_probe(port->passthrough_aux, false);
+ 
+ 	if (drm_dp_dpcd_read(aconnector->dsc_aux, DP_DSC_SUPPORT, dsc_caps, 16) < 0)
+ 		return false;
+@@ -622,6 +627,8 @@ dm_dp_add_mst_connector(struct drm_dp_mst_topology_mgr *mgr,
+ 	aconnector->mst_root = master;
+ 	amdgpu_dm_set_mst_status(&aconnector->mst_status,
+ 			MST_PROBE, true);
++	drm_dp_dpcd_set_probe(&aconnector->mst_output_port->aux, false);
++	drm_dp_dpcd_set_probe(aconnector->mst_output_port->mgr->aux, false);
+ 
+ 	if (drm_connector_dynamic_init(
+ 		dev,
+@@ -809,6 +816,7 @@ void amdgpu_dm_initialize_dp_connector(struct amdgpu_display_manager *dm,
+ 	drm_dp_aux_init(&aconnector->dm_dp_aux.aux);
+ 	drm_dp_cec_register_connector(&aconnector->dm_dp_aux.aux,
+ 				      &aconnector->base);
++	drm_dp_dpcd_set_probe(&aconnector->dm_dp_aux.aux, false);
+ 
+ 	if (aconnector->base.connector_type == DRM_MODE_CONNECTOR_eDP)
+ 		return;
+-- 
+2.43.0
+

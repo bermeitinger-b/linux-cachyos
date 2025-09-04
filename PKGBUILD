@@ -178,7 +178,7 @@ _stable=${_major}-${_rcver}
 _srcname=linux-${_stable}
 #_srcname=linux-${_major}
 pkgdesc='Linux BORE + LTO + AutoFDO + Propeller + Cachy Sauce Kernel by CachyOS with other patches and improvements - Release Candidate'
-pkgrel=2
+pkgrel=3
 _kernver="$pkgver-$pkgrel"
 _kernuname="${pkgver}-${_pkgsuffix}"
 arch=('x86_64')
@@ -209,8 +209,8 @@ source=(
     "https://github.com/torvalds/linux/archive/refs/tags/v${_major}-${_rcver}.tar.gz"
     "config"
     "myconfig"
+    "./0004-drm-amd-display-Disable-DPCD-Probe-Quirk.patch"
     "${_patchsource}/all/0001-cachyos-base-all.patch"
-    "9999-drm-dp-Disable-DPCD-probing.patch"
 )
 
 # LLVM makedepends
@@ -813,7 +813,7 @@ done
 b2sums=('cc1c4c4a4411263b4d2c6d312bc4ce6987b4447b7981b8f748efbd8f6a17cdde9a5a2ef1f96bd2a60ca8265dfafb68baa1574543fa9d637fa714d50f1dbce803'
         '60c923e85e0b768c69de6c1d764546c66c54e092244f936ab648c43f5d5454dd0c9a4e662b9ceaf6e9f82f5b648686aaeaba4e328ed57abda33a349ab1febb90'
         '4011c4cce0375da66691e321911230ef54af99b6bb19a45bf7743b5388035d3d02835733b3fd1daea564f96275a38ce71f17504089428648d3dd8bf151a9bb3e'
+        '4e60f422eca8972175e1a00c927284243f8d0c39d4e8346e7505f1d087ce96d08be95b8dbb2b735c9b895137fd46dc49527bbfd305502079279c34628ba7c212'
         'eb15e025e803dc7816fe5f3467b2380db3c0e942cff97d6a548cc81fe24c25305e47287542d6d71ca324392ee0969000f622d29b2b967209775d61ce9cbc3eca'
-        'ae395f2a8c09782eda3875e95affcd7be213e30fb7b77f79ae25b30cd0a37ab2dbf2dabf4cb3c1fe3bf6e84011e5f5f8e203eecdb43f27f4aa178671764cb927'
         'c7294a689f70b2a44b0c4e9f00c61dbd59dd7063ecbe18655c4e7f12e21ed7c5bb4f5169f5aa8623b1c59de7b2667facb024913ecb9f4c650dabce4e8a7e5452'
         'c37d88a8853d92d342acc76c641ef2979eb002ac68936425d7c9fceb45fab70cbf9e15eecb949a0af1e4b895736458d20bca4c525ffdcedbbb736dfaceaad91d')
