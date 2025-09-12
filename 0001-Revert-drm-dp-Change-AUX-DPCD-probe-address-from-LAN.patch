@@ -1,0 +1,27 @@
+From cdf9f2a547518b0f93988a279e81625981488391 Mon Sep 17 00:00:00 2001
+From: Bernhard Bermeitinger <bernhard.bermeitinger@unisg.ch>
+Date: Thu, 11 Sep 2025 12:47:49 +0200
+Subject: Revert "drm/dp: Change AUX DPCD probe address from LANE0_1_STATUS to
+ TRAINING_PATTERN_SET"
+
+This reverts commit 0fe5997644db7b8abdda13e1cfd0a816220c1710.
+---
+ drivers/gpu/drm/display/drm_dp_helper.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/gpu/drm/display/drm_dp_helper.c b/drivers/gpu/drm/display/drm_dp_helper.c
+index ea78c6c8ca7a..f2a6559a2710 100644
+--- a/drivers/gpu/drm/display/drm_dp_helper.c
++++ b/drivers/gpu/drm/display/drm_dp_helper.c
+@@ -725,7 +725,7 @@ ssize_t drm_dp_dpcd_read(struct drm_dp_aux *aux, unsigned int offset,
+ 	 * monitor doesn't power down exactly after the throw away read.
+ 	 */
+ 	if (!aux->is_remote) {
+-		ret = drm_dp_dpcd_probe(aux, DP_TRAINING_PATTERN_SET);
++		ret = drm_dp_dpcd_probe(aux, DP_DPCD_REV);
+ 		if (ret < 0)
+ 			return ret;
+ 	}
+-- 
+2.51.0
+
